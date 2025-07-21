@@ -50,7 +50,7 @@ namespace ReikaKalseki.DIANEXCAL {
 					FileLog.Log(ex.ToString());
 				}
 				
-				t2Planter = new CustomMachine<PlanterInstance, PlanterDefinition>("Planter MkII", "Grows plants at double-speed of the base planter.", "PlanterT2", EMU.Names.Unlocks.PlanterMKII, EMU.Names.Resources.PlanterMKII);
+				t2Planter = new CustomMachine<PlanterInstance, PlanterDefinition>("Planter MKII", "Grows plants at double-speed of the base planter.", "PlanterT2", EMU.Names.Unlocks.PlanterMKII, EMU.Names.Resources.PlanterMKII);
 				t2Planter.register();
 				
 				NewRecipeDetails t2Recipe = t2Planter.addRecipe("ReikaKalseki.PlanterT2");
@@ -64,7 +64,7 @@ namespace ReikaKalseki.DIANEXCAL {
 				planterCoreTech.finalFixes = () => {
 		        	TTUtil.log("Adjusting "+planterCoreTech.displayName, TTUtil.diDLL);
 					EMU.Unlocks.UpdateUnlockTier(planterCoreTech.displayName, TTUtil.getUnlock("Core Boost (Smelting)").requiredTier, true);
-					EMU.Unlocks.UpdateUnlockTreePosition(planterCoreTech.displayName, TTUtil.getUnlock("Core Boost (Threshing)").treePosition, true);
+					EMU.Unlocks.UpdateUnlockTreePosition(planterCoreTech.displayName, TTUtil.getUnlock("Core Boost (Threshing)").treePosition-0.25F, true);
 					EMU.Unlocks.UpdateUnlockSprite(planterCoreTech.displayName, TTUtil.getUnlock("Planter").sprite, true);
 				};
 				planterCoreTech.register();
@@ -74,15 +74,11 @@ namespace ReikaKalseki.DIANEXCAL {
 				t2PlanterTech.treePosition = 0;
 				t2PlanterTech.finalFixes = () => {
 		        	TTUtil.log("Adjusting "+t2PlanterTech.displayName, TTUtil.diDLL);
-					EMU.Unlocks.UpdateUnlockTier(t2PlanterTech.displayName, TTUtil.getUnlock("Thresher MkII").requiredTier, true);
-					EMU.Unlocks.UpdateUnlockTreePosition(t2PlanterTech.displayName, TTUtil.getUnlock("Core Boost (Threshing)").treePosition, true);
-					EMU.Unlocks.UpdateUnlockSprite(t2PlanterTech.displayName, TTUtil.getUnlock("Planter").sprite, true);
-					
-		        	TTUtil.log("Adjusting "+t2Planter.name+" tech position");
+					EMU.Unlocks.UpdateUnlockSprite(t2PlanterTech.displayName, TTUtil.getUnlock("Planter").sprite, true);					
 					Unlock thresh = TTUtil.getUnlock("Thresher MKII");
 					Unlock pu = TTUtil.getUnlock(t2Planter.name);
 					pu.requiredTier = thresh.requiredTier;
-					pu.treePosition = thresh.treePosition;
+					pu.treePosition = thresh.treePosition-0.25F;
 				};
 				t2PlanterTech.register();
 
