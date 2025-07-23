@@ -354,6 +354,10 @@ namespace ReikaKalseki.DIANEXCAL
 			return c.Count()+":[" + string.Join(",", c.Select<E, string>(e => stringify(e)).ToArray()) + "]";//return toDebugString((IEnumerable<object>)c);
 		}
 		
+		public static string toDebugString<T, V>(this MachineDefinition<T, V> def) where T : struct, IMachineInstance<T, V> where V : MachineDefinition<T, V> {
+			return def.displayName+" ["+def.uniqueId+"] @ T"+def.machineTier+": "+def.GetType()+">"+typeof(T);
+		}
+		
 		public static E pop<E>(this IList<E> c) {
 			E ret = c[0];
 			c.RemoveAt(0);

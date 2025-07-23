@@ -13,7 +13,7 @@ namespace ReikaKalseki.DIANEXCAL {
 
 	public interface Unlockable {
 		
-		string name { get; }
+		Unlock unlock { get; }
 		
 	}
 }

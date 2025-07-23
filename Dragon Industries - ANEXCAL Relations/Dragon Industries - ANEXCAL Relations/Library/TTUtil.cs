@@ -125,14 +125,16 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	}
 		}
 	    
-	    public static Unlock getUnlock(Unlockable u) {
-	    	return getUnlock(u.name);
-	    }
-	    
 	    public static Unlock getUnlock(string name) {
 	    	if (!EMU.LoadingStates.hasGameDefinesLoaded)
 	    		throw new Exception("Tried to access unlock database before defines were finished!");
 	    	return EMU.Unlocks.GetUnlockByName(name, true);
+	    }
+	    
+	    public static TechTreeState.ResearchTier getTierAfter(TechTreeState.ResearchTier tier, int steps = 1) {
+	    	int val = (int)tier;
+	    	val *= MathUtil.intpow2(2, steps);
+	    	return (TechTreeState.ResearchTier)val;
 	    }
 		
 	}

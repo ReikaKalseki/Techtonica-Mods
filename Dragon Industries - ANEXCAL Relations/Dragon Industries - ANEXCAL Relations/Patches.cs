@@ -56,6 +56,70 @@ namespace ReikaKalseki.DIANEXCAL {
 				return codes.AsEnumerable();
 			}
 		}
+
+		[HarmonyPatch(typeof(PlanterInspectorItem))] 
+		[HarmonyPatch("UpdateSlots")]
+		//[HarmonyDebug]
+		public static class PlanterSpeedUIHook {
+
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+				try {
+					int idx = InstructionHandlers.getInstruction(codes, 0, 0, OpCodes.Ldfld, "PlanterInstance+PlantSlot", "totalGrowthDuration");
+					codes.InsertRange(idx+1, new List<CodeInstruction>{new CodeInstruction(OpCodes.Ldarg_1), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "getPlanterGrowthTimeForUI", false, typeof(float), typeof(PlanterInstance).MakeByRefType())});
+					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
+				}
+				catch (Exception e) {
+					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
+					FileLog.Log(e.Message);
+					FileLog.Log(e.StackTrace);
+					FileLog.Log(e.ToString());
+				}
+				return codes.AsEnumerable();
+			}
+		}
+
+		[HarmonyPatch(typeof(PlanterDefinition))] 
+		[HarmonyPatch("InitOverrideSettings")]
+		//[HarmonyDebug]
+		public static class PlanterPowerHook {
+
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+				try {
+					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "initializePlanterSettings", false, typeof(PlanterDefinition)));
+					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
+				}
+				catch (Exception e) {
+					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
+					FileLog.Log(e.Message);
+					FileLog.Log(e.StackTrace);
+					FileLog.Log(e.ToString());
+				}
+				return codes.AsEnumerable();
+			}
+		}
+
+		[HarmonyPatch(typeof(ThresherDefinition))] 
+		[HarmonyPatch("InitOverrideSettings")]
+		//[HarmonyDebug]
+		public static class ThresherPowerHook {
+
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+				try {
+					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "initializeThresherSettings", false, typeof(ThresherDefinition)));
+					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
+				}
+				catch (Exception e) {
+					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
+					FileLog.Log(e.Message);
+					FileLog.Log(e.StackTrace);
+					FileLog.Log(e.ToString());
+				}
+				return codes.AsEnumerable();
+			}
+		}
 			
 		static class PatchLib {
 			

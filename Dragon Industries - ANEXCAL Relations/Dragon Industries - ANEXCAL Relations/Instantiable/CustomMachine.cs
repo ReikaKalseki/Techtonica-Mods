@@ -35,6 +35,8 @@ namespace ReikaKalseki.DIANEXCAL {
 		
 		public bool isUnlocked { get { return tech.isUnlocked; } }
 		
+		public Unlock unlock { get { return TTUtil.getUnlock(name); } }
+		
 		public CustomMachine(string name, string desc, string sprite, string unlock, string template) {
 			resource = new NewResourceDetails();
 			resource.name = name;
@@ -78,20 +80,26 @@ namespace ReikaKalseki.DIANEXCAL {
 		}
 		
 		public void register() {
-			EMUAdditions.AddNewMachine(definition, resource);
-			if (recipe != null)
-				EMUAdditions.AddNewRecipe(recipe);
-			if (tech != null)
-				tech.register();
-			
-			EMU.Events.GameDefinesLoaded += () => {
-				Unlock unlock = TTUtil.getUnlock(name);
-				EMU.Resources.GetResourceInfoByName(name, true).unlock = unlock;
+			try {
+				EMUAdditions.AddNewMachine(definition, resource);
+				if (recipe != null)
+					EMUAdditions.AddNewRecipe(recipe);
+				if (tech != null)
+					tech.register();
 				
-				unlock.unlockedRecipes.Add(recipe.ConvertToRecipe());
-			};
-			
-			TTUtil.log("Registered machine " + this, TTUtil.tryGetModDLL(true));
+				EMU.Events.GameDefinesLoaded += () => {
+					EMU.Resources.GetResourceInfoByName(name, true).unlock = unlock;
+				};
+				
+				EMU.Events.TechTreeStateLoaded += () => {				
+					unlock.unlockedRecipes.Add(recipe.ConvertToRecipe());
+				};
+				
+				TTUtil.log("Registered machine " + this, TTUtil.tryGetModDLL(true));
+			}
+			catch (Exception ex) {
+				TTUtil.log("Failed to register "+this+": "+ex.ToString(), TTUtil.tryGetModDLL(true));
+			}
 		}
 		
 		public override sealed string ToString() {
@@ -99,7 +107,11 @@ namespace ReikaKalseki.DIANEXCAL {
 		}
 		
 		public bool isThisMachine(IMachineInstance<T, V> inst) {
-			return inst.myDef.displayName == name;
+			return isThisMachine(inst.myDef);
+		}
+		
+		public bool isThisMachine(MachineDefinition<T, V> def) {
+			return def.displayName == name;
 		}
 		
 	}

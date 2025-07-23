@@ -22,15 +22,21 @@ namespace ReikaKalseki.DIANEXCAL {
 		
 		public Action finalFixes;
 		
+		private Unlock techInstance;
+		
 		public string name { get { return displayName; } }
+		
+		public Unlock unlock {
+			get {
+				return techInstance;
+			}
+		}
 		
 		public bool isUnlocked {
 			get {
 				return TechTreeState.instance.IsUnlockActive(techInstance.uniqueId);
 			}
 		}
-		
-		private Unlock techInstance;
 		
 		public CustomTech(Unlock.TechCategory cat, ResearchCoreDefinition.CoreType type, int cores) {
 			category = cat;
@@ -39,13 +45,18 @@ namespace ReikaKalseki.DIANEXCAL {
 		}
 		
 		public void register() {
-			EMUAdditions.AddNewUnlock(this, true);
-			EMU.Events.GameDefinesLoaded += () => {
-				techInstance = TTUtil.getUnlock(displayName);
-				if (finalFixes != null)
-					finalFixes.Invoke();
-			};
-			TTUtil.log("Registered tech "+this, TTUtil.tryGetModDLL(true));
+			try {
+				EMUAdditions.AddNewUnlock(this, true);
+				EMU.Events.GameDefinesLoaded += () => {
+					techInstance = TTUtil.getUnlock(displayName);
+					if (finalFixes != null)
+						finalFixes.Invoke();
+				};
+				TTUtil.log("Registered tech "+this, TTUtil.tryGetModDLL(true));
+			}
+			catch (Exception ex) {
+				TTUtil.log("Failed to register "+this+": "+ex.ToString(), TTUtil.tryGetModDLL(true));
+			}
 		}
 		
 		public override sealed string ToString() {

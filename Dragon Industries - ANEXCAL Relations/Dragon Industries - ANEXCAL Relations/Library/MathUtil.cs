@@ -36,6 +36,14 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	return dx*dx+dy*dy+dz*dz;
 	    }
 		
+		public static int intpow2(int v, int pow) {
+			int val = 1;
+			for (int i = 0; i < pow; i++) {
+				val *= v;
+			}
+			return val;
+		}
+		
 		public static Vector3 findRandomPointInsideEllipse(Vector3 center, float length, float width) {
 			Rect rec = new Rect(center.x-length/2, center.z-width/2, length, width);
 			Vector2 vec = getRandomVectorInside(rec);
