@@ -358,6 +358,22 @@ namespace ReikaKalseki.DIANEXCAL
 			return def.displayName+" ["+def.uniqueId+"] @ T"+def.machineTier+": "+def.GetType()+">"+typeof(T);
 		}
 		
+		public static string toDebugString(this SchematicsRecipeData rec) {
+			string s = "";
+			for (int i = 0; i < rec.ingTypes.Length; i++) {
+				s += rec.ingTypes[i].displayName+"x"+rec.ingQuantities[i];
+				if (i < rec.ingTypes.Length-1)
+					s += "+";
+			}
+			s += " > ";
+			for (int i = 0; i < rec.ingTypes.Length; i++) {
+				s += rec.outputTypes[i].displayName+"x"+rec.outputQuantities[i];
+				if (i < rec.outputTypes.Length-1)
+					s += "+";
+			}
+			return s;
+		}
+		
 		public static E pop<E>(this IList<E> c) {
 			E ret = c[0];
 			c.RemoveAt(0);

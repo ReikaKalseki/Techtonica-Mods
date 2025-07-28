@@ -125,10 +125,23 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	}
 		}
 	    
+	    public static SchematicsRecipeData getSmelterRecipe(string item) {
+	    	ResourceInfo res = EMU.Resources.GetResourceInfoByName(item);
+	    	if (res == null)
+	    		throw new Exception("No such item '"+item+"'!");
+	    	List<SchematicsRecipeData> li = GameDefines.instance.GetValidSmelterRecipes(new List<int>{res.uniqueId}, 100, 100, false);
+	    	if (li.Count == 0)
+	    		log("No smelter recipe found using '"+item+"'!", diDLL);
+	    	return li.Count == 0 ? null : li[0];
+	    }
+	    
 	    public static Unlock getUnlock(string name) {
 	    	if (!EMU.LoadingStates.hasGameDefinesLoaded)
 	    		throw new Exception("Tried to access unlock database before defines were finished!");
-	    	return EMU.Unlocks.GetUnlockByName(name, true);
+	    	Unlock u = EMU.Unlocks.GetUnlockByName(name, false);
+	    	if (u == null)
+	    		throw new Exception("No such unlock '"+name+"'!");
+	    	return u;
 	    }
 	    
 	    public static TechTreeState.ResearchTier getTierAfter(TechTreeState.ResearchTier tier, int steps = 1) {

@@ -34,17 +34,14 @@ namespace ReikaKalseki.DIANEXCAL {
 			}
 		}
 
-		[HarmonyPatch(typeof(PlanterInstance))] 
-		[HarmonyPatch("SimUpdate")]
-		//[HarmonyDebug]
-		public static class PlanterSpeedHook {
+		[HarmonyPatch(typeof(GameDefines))] 
+		[HarmonyPatch("PostLoadRuntimeInit")]
+		public static class RecipeLoadHook {
 
 			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
 				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
 				try {
-					int idx = InstructionHandlers.getMethodCallByName(codes, 0, 0, "PlanterInstance+PlantSlot", "UpdateGrowth");
-					codes[idx] = InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "tickPlantSlot", false, typeof(PlanterInstance.PlantSlot).MakeByRefType(), typeof(float), typeof(PlanterInstance).MakeByRefType());
-					codes.Insert(idx, new CodeInstruction(OpCodes.Ldarg_0));
+					InstructionHandlers.patchEveryReturnPre(codes, InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "onRecipeDataLoaded", false, new Type[0]));
 					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
 				}
 				catch (Exception e) {
@@ -57,37 +54,14 @@ namespace ReikaKalseki.DIANEXCAL {
 			}
 		}
 
-		[HarmonyPatch(typeof(PlanterInspectorItem))] 
-		[HarmonyPatch("UpdateSlots")]
-		//[HarmonyDebug]
-		public static class PlanterSpeedUIHook {
-
-			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
-				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
-				try {
-					int idx = InstructionHandlers.getInstruction(codes, 0, 0, OpCodes.Ldfld, "PlanterInstance+PlantSlot", "totalGrowthDuration");
-					codes.InsertRange(idx+1, new List<CodeInstruction>{new CodeInstruction(OpCodes.Ldarg_1), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "getPlanterGrowthTimeForUI", false, typeof(float), typeof(PlanterInstance).MakeByRefType())});
-					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
-				}
-				catch (Exception e) {
-					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
-					FileLog.Log(e.Message);
-					FileLog.Log(e.StackTrace);
-					FileLog.Log(e.ToString());
-				}
-				return codes.AsEnumerable();
-			}
-		}
-
-		[HarmonyPatch(typeof(PlanterDefinition))] 
+		[HarmonyPatch(typeof(AccumulatorDefinition))] 
 		[HarmonyPatch("InitOverrideSettings")]
-		//[HarmonyDebug]
-		public static class PlanterPowerHook {
+		public static class AccumulatorCapacityHook {
 
 			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
 				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
 				try {
-					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "initializePlanterSettings", false, typeof(PlanterDefinition)));
+					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "initializeAccumulatorSettings", false, typeof(AccumulatorDefinition)));
 					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
 				}
 				catch (Exception e) {
@@ -100,15 +74,17 @@ namespace ReikaKalseki.DIANEXCAL {
 			}
 		}
 
-		[HarmonyPatch(typeof(ThresherDefinition))] 
-		[HarmonyPatch("InitOverrideSettings")]
-		//[HarmonyDebug]
-		public static class ThresherPowerHook {
+		[HarmonyPatch(typeof(GridManager))] 
+		public static class DigProtectionHook {
+
+		    public static MethodBase TargetMethod() {
+		        return AccessTools.Method(typeof(GridManager), "IsVoxelTerrainProtected", new Type[]{typeof(GridPos).MakeByRefType()});
+		    }
 
 			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
 				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
 				try {
-					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "initializeThresherSettings", false, typeof(ThresherDefinition)));
+					InstructionHandlers.patchEveryReturnPre(codes, InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "interceptProtection", false, typeof(bool)));
 					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
 				}
 				catch (Exception e) {
@@ -121,9 +97,9 @@ namespace ReikaKalseki.DIANEXCAL {
 			}
 		}
 			
-		static class PatchLib {
+		public static class PatchLib {
 			
-			internal static void replaceMaybeInlinedFieldWithConstant(List<CodeInstruction> codes, string owner, string name, float origVal, float newVal) {
+			public static void replaceMaybeInlinedFieldWithConstant(List<CodeInstruction> codes, string owner, string name, float origVal, float newVal) {
 				int idx = -1;
 				try {
 					idx = InstructionHandlers.getInstruction(codes, 0, 0, OpCodes.Ldsfld, owner, name);

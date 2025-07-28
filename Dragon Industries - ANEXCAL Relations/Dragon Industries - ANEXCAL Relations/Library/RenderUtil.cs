@@ -78,7 +78,7 @@ namespace ReikaKalseki.DIANEXCAL {
 	    }
 		
 		public static Texture2D duplicateTexture(Texture2D source) {
-		    RenderTexture renderTex = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);		
+		    RenderTexture renderTex = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);		
 		    Graphics.Blit(source, renderTex);
 		    RenderTexture previous = RenderTexture.active;
 		    RenderTexture.active = renderTex;
