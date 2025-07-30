@@ -31,6 +31,9 @@ namespace ReikaKalseki.Botanerranean {
         private static CustomTech t3PlanterTech;
         private static CustomMachine<PlanterInstance, PlanterDefinition> t3Planter;
         
+        public static SchematicsRecipeData planter2Recipe;
+        public static SchematicsRecipeData planter3Recipe;
+        
         public static readonly Assembly modDLL = Assembly.GetExecutingAssembly();
 
         public BotanerraneanMod() : base() {
@@ -57,10 +60,13 @@ namespace ReikaKalseki.Botanerranean {
 				}
 				
 				t3Planter = new CustomMachine<PlanterInstance, PlanterDefinition>("Planter MKIII", "Grows plants at quadruple the speed of the MK1 planter.", "PlanterT3", EMU.Names.Unlocks.PlanterMKII, EMU.Names.Resources.PlanterMKII);
-				t3Planter.register();
+				t3Planter.addRecipe().ingredients = new List<RecipeResourceInfo>{new RecipeResourceInfo{name=EMU.Names.Resources.PlanterMKII, quantity = 1}}; //will populate it later
+                
+				t3PlanterTech = t3Planter.createUnlock(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Gold, 100);
+				t3PlanterTech.requiredTier = TechTreeState.ResearchTier.Tier0;
+				t3PlanterTech.treePosition = 0;
 				
-				NewRecipeDetails t2Recipe = t3Planter.addRecipe("ReikaKalseki.PlanterT3");
-				TTUtil.setIngredients(t2Recipe, EMU.Names.Resources.IronComponents, 18, EMU.Names.Resources.Dirt, 12); //TODO temp recipe
+				t3Planter.register();
                 
 				planterCoreTech = new CustomTech(Unlock.TechCategory.Science, ResearchCoreDefinition.CoreType.Blue, 100);
 				planterCoreTech.displayName = "Core Boost (Planter)";
@@ -89,14 +95,6 @@ namespace ReikaKalseki.Botanerranean {
 		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
 				};
 				seedYieldCoreTech.register();
-                
-				t3PlanterTech = t3Planter.createUnlock(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Blue, 100);
-				t3PlanterTech.requiredTier = TechTreeState.ResearchTier.Tier0;
-				t3PlanterTech.treePosition = 0;
-				t3PlanterTech.finalFixes = () => {
-					t3PlanterTech.unlock.sprite = TTUtil.getUnlock(EMU.Names.Resources.PlanterMKII).sprite;					
-				};
-				t3PlanterTech.register();
 
 				EMU.Events.GameDefinesLoaded += onDefinesLoaded;
 				
@@ -114,22 +112,26 @@ namespace ReikaKalseki.Botanerranean {
 			Unlock t3 = TTUtil.getUnlock("Planter MKIII");
 			t3.requiredTier = pu.requiredTier;
 			t3.treePosition = pu.treePosition;
-			t3.coresNeeded = new List<Unlock.RequiredCores>(pu.coresNeeded);
+			t3.coresNeeded.Clear();
+			t3.coresNeeded.Add(new Unlock.RequiredCores{type=ResearchCoreDefinition.CoreType.Gold, number=pu.coresNeeded[0].number});
 			t3.dependencies = new List<Unlock>(pu.dependencies);
 			t3.dependencies.Add(pu);
 			t3.dependency1 = pu.dependency1;
 			t3.dependency2 = pu.dependency2;
-			t3.numScansNeeded = pu.numScansNeeded;
+			t3.numScansNeeded = 0;//pu.numScansNeeded;
 			
 			TTUtil.log("Moving PlanterMKII tech");				
 			Unlock thresh = TTUtil.getUnlock(EMU.Names.Resources.ThresherMKII);
-			pu.requiredTier = TTUtil.getTierAfter(thresh.requiredTier);
-			pu.treePosition = thresh.treePosition;
+			pu.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 2);//TTUtil.getTierAfter(thresh.requiredTier);
+			pu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.AssemblerMKII).treePosition;
 			pu.coresNeeded.Clear();
 			pu.coresNeeded.Add(new Unlock.RequiredCores{type = ResearchCoreDefinition.CoreType.Blue, number = 50});
 			pu.dependencies = new List<Unlock>{thresh};
 			pu.dependency1 = thresh.dependency1;
 			pu.dependency2 = thresh.dependency2;
+			
+			t3Planter.item.description = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlanterMKII).description.Replace("rapid", "extremely fast");
+			t3.description = t3Planter.item.displayName;
 			
 			makeSeedToFuel(EMU.Names.Resources.KindlevineSeed, 1.5F);
 			makeSeedToFuel(EMU.Names.Resources.ShiverthornSeed, 0.5F);
@@ -137,7 +139,31 @@ namespace ReikaKalseki.Botanerranean {
 		}
         
         private static void onRecipesLoaded() {
-        	//SchematicsRecipeData rec = GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.ShiverthornBuds));
+        	int id2 = EMU.Resources.GetResourceIDByName(EMU.Names.Resources.PlanterMKII);
+        	int id3 = EMU.Resources.GetResourceIDByName(t3Planter.name);
+        	planter2Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeID(id2));
+        	planter3Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeID(id3));
+        	
+        	if (planter2Recipe == null) {
+        		TTUtil.log("No planter 2 recipe (id="+id2+")");
+        		return;
+        	}
+        	if (planter3Recipe == null) {
+        		TTUtil.log("No planter 3 recipe (id="+id3+")");
+        		return;
+        	}
+        	
+        	planter3Recipe.ingTypes = new ResourceInfo[planter2Recipe.ingTypes.Length];
+        	for (int i = 0; i < planter3Recipe.ingTypes.Length; i++) {
+        		planter3Recipe.ingTypes[i] = planter2Recipe.ingTypes[i];
+        		if (planter3Recipe.ingTypes[i].uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.Planter))
+        			planter3Recipe.ingTypes[i] = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlanterMKII);
+        	}
+        	planter3Recipe.ingQuantities = new int[planter2Recipe.ingQuantities.Length];
+        	Array.Copy(planter2Recipe.ingQuantities, planter3Recipe.ingQuantities, planter3Recipe.ingQuantities.Length);
+        	TTUtil.compileRecipe(planter3Recipe);
+        	
+        	TTUtil.setIngredients(planter2Recipe, EMU.Names.Resources.Planter, 2, EMU.Names.Resources.SteelFrame, 1, EMU.Names.Resources.CeramicParts, 8, EMU.Names.Resources.AdvancedCircuit, 15);
         }
         
         private static void makeSeedToFuel(string name, float relativeValue = 1) {
@@ -145,6 +171,8 @@ namespace ReikaKalseki.Botanerranean {
         	ResourceInfo res = EMU.Resources.GetResourceInfoByName(name);
         	res.fuelAmount = template.fuelAmount*1.5F*relativeValue;
         	TTUtil.log(name+" now has fuel value "+res.fuelAmount.ToString("0.0"));
+        	
+        	//TODO add plantmatter crafting
         }
         
         public static bool tickPlantSlot(ref PlanterInstance.PlantSlot slot, float increment, ref PlanterInstance owner) { //no need to handle T2, as it is already doubled

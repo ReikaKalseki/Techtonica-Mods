@@ -359,15 +359,23 @@ namespace ReikaKalseki.DIANEXCAL
 		}
 		
 		public static string toDebugString(this SchematicsRecipeData rec) {
+			if (rec.ingTypes == null || rec.ingQuantities == null)
+				return "Errored null-in recipe "+rec.name;
+			if (rec.outputTypes == null || rec.outputQuantities == null)
+				return "Errored null-out recipe "+rec.name;
+			if (rec.ingTypes.Length != rec.ingQuantities.Length)
+				return "Errored misaligned-in recipe "+rec.name+" "+rec.ingTypes.toDebugString()+"/"+rec.ingQuantities.toDebugString();
+			if (rec.outputTypes.Length != rec.outputQuantities.Length)
+				return "Errored misaligned-out recipe "+rec.name+" "+rec.outputTypes.toDebugString()+"/"+rec.outputQuantities.toDebugString();
 			string s = "";
 			for (int i = 0; i < rec.ingTypes.Length; i++) {
-				s += rec.ingTypes[i].displayName+"x"+rec.ingQuantities[i];
+				s += (rec.ingTypes[i] == null ? "NULLRESIN" : rec.ingTypes[i].displayName)+"x"+rec.ingQuantities[i];
 				if (i < rec.ingTypes.Length-1)
 					s += "+";
 			}
 			s += " > ";
-			for (int i = 0; i < rec.ingTypes.Length; i++) {
-				s += rec.outputTypes[i].displayName+"x"+rec.outputQuantities[i];
+			for (int i = 0; i < rec.outputTypes.Length; i++) {
+				s += (rec.outputTypes[i] == null ? "NULLRESOUT" : rec.outputTypes[i].displayName)+"x"+rec.outputQuantities[i];
 				if (i < rec.outputTypes.Length-1)
 					s += "+";
 			}

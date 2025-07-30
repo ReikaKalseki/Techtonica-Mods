@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Reflection;
 using System.Linq;
-using System.Threading;
-using System.Diagnostics;
 using System.Xml;
+using System.Diagnostics;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,6 +23,8 @@ namespace ReikaKalseki.DIANEXCAL {
 	    
 	    public static readonly string gameDir = Directory.GetParent(gameDLL.Location).Parent.Parent.FullName; //managed -> _Data -> root
 		//public static readonly string savesDir = "C:/Users/Reika/AppData/LocalLow/Fire Hose Games/Techtonica";
+		
+		private static readonly Dictionary<int, int> recipeIDs = new Dictionary<int, int>();
 
         public static bool allowDIDLL = false;
 	    
@@ -125,6 +126,30 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	}
 		}
 	    
+	    public static void setIngredients(SchematicsRecipeData rec, params object[] items) {
+	    	int len = items.Length/2;
+	    	rec.ingTypes = new ResourceInfo[len];
+	    	rec.ingQuantities = new int[len];
+	    	for (int i = 0; i < items.Length; i += 2) {
+	    		int idx = i/2;
+	    		object ing = items[i];
+	    		ResourceInfo info = ing is ResourceInfo ? (ResourceInfo)ing : EMU.Resources.GetResourceInfoByName((string)ing);
+	    		if (info == null)
+	    			throw new Exception("No such ingredient '"+ing+"'");
+	    		rec.ingTypes[idx] = info;
+	    		rec.ingQuantities[idx] = (int)items[i+1];
+        	};
+	    	//rec.ingTypes.ToList().ForEach(res => {if (res == null)throw new Exception("Null ingredient in "+rec.name);});
+	    	compileRecipe(rec);
+		}
+	    
+	    public static void compileRecipe(SchematicsRecipeData rec) {
+	    	rec.runtimeIngQuantities = rec.ingQuantities;
+	    	if (rec.ingTypes.Length > 3)
+	    		throw new Exception("Too many ingredients in "+rec.toDebugString());
+	    	log("Recipe "+rec.name+" changed: {"+rec.toDebugString()+"}");
+	    }
+	    
 	    public static SchematicsRecipeData getSmelterRecipe(string item) {
 	    	ResourceInfo res = EMU.Resources.GetResourceInfoByName(item);
 	    	if (res == null)
@@ -148,6 +173,53 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	int val = (int)tier;
 	    	val *= MathUtil.intpow2(2, steps);
 	    	return (TechTreeState.ResearchTier)val;
+	    }
+	    
+	    public static TechTreeState.ResearchTier getTierAtStation(ProductionTerminal station, int tier) {
+	    	TechTreeState.ResearchTier start = TechTreeState.ResearchTier.NONE;
+	    	switch (station) {
+	    		case ProductionTerminal.LIMA:
+	    			start = TechTreeState.ResearchTier.Tier0;
+	    			break;
+	    		case ProductionTerminal.VICTOR:
+	    			start = TechTreeState.ResearchTier.Tier4;
+	    			break;
+	    		case ProductionTerminal.XRAY:
+	    			start = TechTreeState.ResearchTier.Tier11;
+	    			break;
+	    		case ProductionTerminal.SIERRA:
+	    			start = TechTreeState.ResearchTier.Tier16;
+	    			break;
+	    	}
+	    	return getTierAfter(start, tier);
+	    }
+	    
+	    public static void buildRecipeCache() {
+	    	FieldInfo f = typeof(GameDefines).GetField("_cachedRecipeLookupArray", BindingFlags.Instance | BindingFlags.NonPublic);
+	    	if (f == null)
+	    		throw new Exception("No recipe field!");
+	    	SchematicsRecipeData[] arr = (SchematicsRecipeData[])f.GetValue(GameDefines.instance);
+	    	if (arr == null)
+	    		throw new Exception("No recipe array!");
+	    	foreach (SchematicsRecipeData rec in arr) {
+	    		if (rec == null)
+	    			continue;
+	    		if (rec.outputTypes.Length > 0 && rec.outputTypes[0] != null) {
+	    			recipeIDs[rec.outputTypes[0].uniqueId] = rec.uniqueId;
+	    		}
+	    	}
+	    	log("Compiled recipe cache with "+recipeIDs.Count+" entries", diDLL);
+	    }
+	    
+	    public static int getRecipeID(int res) {
+	    	return recipeIDs.ContainsKey(res) ? recipeIDs[res] : -1;
+	    }
+	    
+	    public enum ProductionTerminal {
+	    	LIMA,
+	    	VICTOR,
+	    	XRAY,
+	    	SIERRA,
 	    }
 		
 	}

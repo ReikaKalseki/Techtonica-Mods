@@ -26,16 +26,18 @@ namespace ReikaKalseki.DIANEXCAL {
 		private CustomTech tech;
 		
 		private NewRecipeDetails recipe;
+		
+		private int recipeID = -1;
         
 		public string name { get { return resource.name; } }
         
-		public string description { get { return resource.description; } }
-        
-		public Sprite sprite { get { return resource.sprite; } }
+		public ResourceInfo item { get { return EMU.Resources.GetResourceInfoByName(name); } }
 		
 		public bool isUnlocked { get { return tech.isUnlocked; } }
 		
 		public Unlock unlock { get { return TTUtil.getUnlock(name); } }
+		
+		public SchematicsRecipeData registeredRecipe { get { return GameDefines.instance.GetSchematicsRecipeDataById(recipeID); } }
 		
 		public CustomMachine(string name, string desc, string sprite, string unlock, string template) {
 			resource = new NewResourceDetails();
@@ -49,7 +51,7 @@ namespace ReikaKalseki.DIANEXCAL {
 			resource.sortPriority = 998;
 			resource.unlockName = unlock;
 			resource.parentName = template;
-			resource.sprite = TextureManager.createSprite(TextureManager.getTexture(TTUtil.tryGetModDLL(true), sprite));
+			resource.sprite = TextureManager.createSprite(TextureManager.getTexture(TTUtil.tryGetModDLL(true), "Textures/"+sprite));
 			
 			definition = ScriptableObject.CreateInstance<V>();
 		}
@@ -57,14 +59,14 @@ namespace ReikaKalseki.DIANEXCAL {
 		public CustomTech createUnlock(Unlock.TechCategory cat, ResearchCoreDefinition.CoreType type, int cores) {
 			tech = new CustomTech(cat, type, cores);
 			tech.displayName = name;
-			tech.description = description;
-			tech.sprite = sprite;
+			tech.description = item.description;
+			tech.sprite = item.sprite;
 			return tech;
 		}
 		
-		public NewRecipeDetails addRecipe(string id, int amt = 1) {
+		public NewRecipeDetails addRecipe(int amt = 1) {
 			recipe = new NewRecipeDetails();
-			recipe.GUID = id;
+			recipe.GUID = name;
 			recipe.craftingMethod = CraftingMethod.Assembler;
 			recipe.craftTierRequired = 0;
 			recipe.duration = 1F;
@@ -81,18 +83,26 @@ namespace ReikaKalseki.DIANEXCAL {
 		
 		public void register() {
 			try {
-				EMUAdditions.AddNewMachine(definition, resource);
+				EMUAdditions.AddNewMachine(definition, resource, true);
+				
 				if (recipe != null)
-					EMUAdditions.AddNewRecipe(recipe);
+					EMUAdditions.AddNewRecipe(recipe, true);
+				else
+					TTUtil.log("Machine '"+this+"' has no recipe!");
+				
 				if (tech != null)
 					tech.register();
+				else
+					TTUtil.log("Machine '"+this+"' has no tech!");
 				
 				EMU.Events.GameDefinesLoaded += () => {
 					EMU.Resources.GetResourceInfoByName(name, true).unlock = unlock;
 				};
 				
-				EMU.Events.TechTreeStateLoaded += () => {				
-					unlock.unlockedRecipes.Add(recipe.ConvertToRecipe());
+				EMU.Events.TechTreeStateLoaded += () => {
+					recipeID = TTUtil.getRecipeID(EMU.Resources.GetResourceIDByName(name));
+					if (recipeID != -1)
+						unlock.unlockedRecipes.Add(registeredRecipe);
 				};
 				
 				TTUtil.log("Registered machine " + this, TTUtil.tryGetModDLL(true));

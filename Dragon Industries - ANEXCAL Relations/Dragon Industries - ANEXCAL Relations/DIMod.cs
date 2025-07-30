@@ -70,6 +70,8 @@ namespace ReikaKalseki.DIANEXCAL {
 		public static void onRecipeDataLoaded() {
         	TTUtil.log("Recipe data loaded, running hooks", TTUtil.diDLL);
         	
+        	TTUtil.buildRecipeCache();
+        	
         	doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.IronOre));
         	doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.CopperOre));
         	doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.GoldOre));
@@ -79,8 +81,14 @@ namespace ReikaKalseki.DIANEXCAL {
         	doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.AtlantumOre)));
         	doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.GoldOre)));
         	
-        	if (onRecipesLoaded != null)
-        		onRecipesLoaded.Invoke();
+        	if (onRecipesLoaded != null) {
+        		try {
+        			onRecipesLoaded.Invoke();
+        		}
+        		catch (Exception ex) {
+        			TTUtil.log("Exception caught when handling recipe loading: "+ex, TTUtil.diDLL);
+        		}
+        	}
         }
         
 		private static void doubleRecipe(SchematicsRecipeData rec) {
