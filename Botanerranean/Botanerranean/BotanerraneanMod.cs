@@ -32,6 +32,7 @@ namespace ReikaKalseki.Botanerranean {
         private static CustomTech seedYieldTech2;
         private static CustomTech seedYieldTech3;
         private static CustomTech t3PlanterTech;
+        private static CustomTech seedPlantmatterTech;
         private static CustomMachine<PlanterInstance, PlanterDefinition> t3Planter;
         private static ResourceInfo t2Planter;
         
@@ -39,6 +40,8 @@ namespace ReikaKalseki.Botanerranean {
         public static SchematicsRecipeData planter3Recipe;
         
         public static readonly Assembly modDLL = Assembly.GetExecutingAssembly();
+        
+        private static readonly Dictionary<string, NewRecipeDetails> seedRecipes = new Dictionary<string, NewRecipeDetails>();
 
         public BotanerraneanMod() : base() {
             instance = this;
@@ -86,7 +89,7 @@ namespace ReikaKalseki.Botanerranean {
 				};
 				planterCoreTech.register();
 				
-				seedYieldTech1 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Blue, 80);
+				seedYieldTech1 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Purple, 150);
 				seedYieldTech1.displayName = "Seed Yield I";
 				seedYieldTech1.description = "Increases seed yield from threshing by 5%.";
 				seedYieldTech1.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 1);
@@ -99,7 +102,7 @@ namespace ReikaKalseki.Botanerranean {
 				};
 				seedYieldTech1.register();
 				
-				seedYieldTech2 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Blue, 160);
+				seedYieldTech2 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Blue, 80);
 				seedYieldTech2.displayName = "Seed Yield II";
 				seedYieldTech2.description = "Increases seed yield from threshing by 10%.";
 				seedYieldTech2.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 5);
@@ -125,7 +128,7 @@ namespace ReikaKalseki.Botanerranean {
 		        	tu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.CarbonPowder).treePosition;
 		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
 		        	tu.dependency1 = seedYieldTech2.unlock;
-		        	tu.dependencies = new List<Unlock>{tu.dependency2};
+		        	tu.dependencies = new List<Unlock>{tu.dependency1};
 				};
 				seedYieldTech3.register();
 				
@@ -142,8 +145,25 @@ namespace ReikaKalseki.Botanerranean {
 		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
 				};
 				seedYieldCoreTech.register();
+				
+				seedPlantmatterTech = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Purple, 50);
+				seedPlantmatterTech.displayName = "Seed Decomposition";
+				seedPlantmatterTech.description = "Enables recycling seeds into plantmatter.";
+				seedPlantmatterTech.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 4);
+				seedPlantmatterTech.treePosition = 0;
+				seedPlantmatterTech.finalFixes = () => {
+		        	TTUtil.log("Adjusting "+seedPlantmatterTech.displayName);
+		        	Unlock tu = seedPlantmatterTech.unlock;
+		        	tu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.SmelterMKII).treePosition;
+		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.Plantmatter).sprite;
+				};
+				seedPlantmatterTech.register();
+			
+				makeSeedToFuel(EMU.Names.Resources.KindlevineSeed, 1.5F);
+				makeSeedToFuel(EMU.Names.Resources.ShiverthornSeed, 0.5F);
+				makeSeedToFuel(EMU.Names.Resources.SesamiteSeed);
 
-				EMU.Events.GameDefinesLoaded += onDefinesLoaded;
+				DIMod.onDefinesLoadedFirstTime += onDefinesLoaded;
 				EMU.Events.TechTreeStateLoaded += onTechsLoaded;
 				
 				DIMod.onRecipesLoaded += onRecipesLoaded;
@@ -181,17 +201,13 @@ namespace ReikaKalseki.Botanerranean {
 			t2Planter = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlanterMKII);
 			t3Planter.item.description = t2Planter.description.Replace("rapid", "extremely fast");
 			t3.description = t3Planter.item.displayName;
-			
-			makeSeedToFuel(EMU.Names.Resources.KindlevineSeed, 1.5F);
-			makeSeedToFuel(EMU.Names.Resources.ShiverthornSeed, 0.5F);
-			makeSeedToFuel(EMU.Names.Resources.SesamiteSeed);
 		}
         
         private static void onRecipesLoaded() {
         	int id2 = EMU.Resources.GetResourceIDByName(EMU.Names.Resources.PlanterMKII);
         	int id3 = EMU.Resources.GetResourceIDByName(t3Planter.name);
-        	planter2Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeID(id2));
-        	planter3Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeID(id3));
+        	planter2Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeIDByOutput(id2));
+        	planter3Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeIDByOutput(id3));
         	
         	if (planter2Recipe == null) {
         		TTUtil.log("No planter 2 recipe (id="+id2+")");
@@ -219,15 +235,47 @@ namespace ReikaKalseki.Botanerranean {
         private static void onTechsLoaded() {
         	TTUtil.setUnlockRecipes(EMU.Names.Resources.PlanterMKII, planter2Recipe);
         	TTUtil.setUnlockRecipes(t3Planter.name, planter3Recipe);
+        	
+        	TTUtil.setUnlockRecipes(seedPlantmatterTech.name, TTUtil.getRecipes(isSeedRecycling).ToArray());
+        }
+        
+        private static bool isSeedRecycling(SchematicsRecipeData rec) {
+        	if (rec == null)
+        		return false;
+        	if (rec.ingTypes == null || rec.ingTypes[0] == null || rec.outputTypes == null || rec.outputTypes[0] == null) {
+        		TTUtil.log("Invalid recipe "+rec.toDebugString());
+        		return false;
+        	}
+        	return rec.ingTypes.Length == 1 && TTUtil.isSeed(rec.ingTypes[0]) && rec.outputTypes.Length == 1 && rec.outputTypes[0].uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.Plantmatter);
         }
         
         private static void makeSeedToFuel(string name, float relativeValue = 1) {
-        	ResourceInfo template = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlantmatterFiber);
-        	ResourceInfo res = EMU.Resources.GetResourceInfoByName(name);
-        	res.fuelAmount = template.fuelAmount*1.5F*relativeValue;
-        	TTUtil.log(name+" now has fuel value "+res.fuelAmount.ToString("0.0"));
+        	//ResourceInfo plantmatter = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.Plantmatter);
+        	//ResourceInfo res = EMU.Resources.GetResourceInfoByName(name);
+        	//res.fuelAmount = template.fuelAmount*1.5F*relativeValue;
+        	//TTUtil.log(name+" now has fuel value "+res.fuelAmount.ToString("0.0"));
         	
-        	//TODO add plantmatter crafting
+			NewRecipeDetails recipe = new NewRecipeDetails();
+			recipe.GUID = name+"_To_Plantmatter";
+			recipe.craftingMethod = CraftingMethod.Assembler;
+			recipe.craftTierRequired = 0;
+			recipe.duration = 2F;
+			recipe.sortPriority = 10;
+			recipe.unlockName = seedPlantmatterTech.name;
+			recipe.ingredients = new List<RecipeResourceInfo>() {
+				new RecipeResourceInfo() {
+					name = name,
+					quantity = 1,
+				}
+			};
+			recipe.outputs = new List<RecipeResourceInfo>() {
+				new RecipeResourceInfo() {
+					name = EMU.Names.Resources.Plantmatter,
+					quantity = 6.multiplyBy(relativeValue),
+				}
+			};
+			
+			EMUAdditions.AddNewRecipe(recipe, true);
         }
         
         public static bool tickPlantSlot(ref PlanterInstance.PlantSlot slot, float increment, ref PlanterInstance owner) { //no need to handle T2, as it is already doubled
@@ -292,7 +340,7 @@ namespace ReikaKalseki.Botanerranean {
         		else if (seedYieldTech1.isUnlocked)
         			chance += 0.05F;
         		chance *= globalThresherSeedFactor;
-        		TTUtil.log("Thresher "+machine._myDef.name+" has a "+(chance*100).ToString("0.0")+"% chance of making an extra seed (from "+amt+")");
+        		//TTUtil.log("Thresher "+machine._myDef.name+" has a "+(chance*100).ToString("0.0")+"% chance of making an extra seed (from "+amt+")");
         		if (UnityEngine.Random.Range(0F, 1F) < chance) {
         			amt += 1;
         			//TTUtil.log("Success");
@@ -318,22 +366,56 @@ namespace ReikaKalseki.Botanerranean {
 			});
         }
         
-        private static bool changedPTResources;
+        //private static bool changedPTResources;
         
-        public static void onProdTerminalResourceUpdate(ref ProductionTerminalInstance terminal) {
-        	changedPTResources = false;
-        	terminal._myDef.tierChanges.ToList().ForEach(t => t.resourcesRequired.ToList().ForEach(replacePlanter2With3));
-        	terminal.resourcesRequired.ToList().ForEach(replacePlanter2With3);
-        	if (changedPTResources)
-        		TTUtil.log("Replaced planter 2 with 3 in PT "+terminal._myDef.displayName);
+        //private static bool appliedPlanterTerminalReplace;
+        
+        public static void onProdTerminalResourceUpdate(ref ProductionTerminalDefinition.ResourceRequirementData[] arr, GatedDoorConfiguration cfg) {
+        	//if (appliedPlanterTerminalReplace)
+        	//	return;
+        	if (cfg == null) {
+        		return;
+        	}
+        	TTUtil.log("onProdTerminalResourceUpdate for "+cfg.name);
+        	if (cfg.reqTypes == null) {
+        		TTUtil.log("Null reqs!!");
+        		return;
+        	}
+        	//terminal._myDef.tierChanges.ToList().ForEach(t => t.resourcesRequired.ToList().ForEach(replacePlanter2With3));
+        	//terminal.resourcesRequired.ToList().ForEach(replacePlanter2With3);
+        	for (int i = 0; i < cfg.reqTypes.Length; i++) {
+        		ResourceInfo res = cfg.reqTypes[i];
+        		TTUtil.log("Checking "+res.toDebugString());
+        		bool flag = false;
+        		if (res != null && res.uniqueId == t2Planter.uniqueId) {
+        			ResourceInfo res2 = t3Planter.item;
+        			if (res2 == null) {
+        				throw new Exception("No such item to add to production terminal to replace '"+res.toDebugString()+"'!");
+        			}
+        			if (res2.rawSprite == null) {
+        				throw new Exception("Item "+res2.toDebugString()+" not valid for production terminal, has no sprite!");
+        			}
+        			cfg.reqTypes[i] = res2;
+        			TTUtil.log("Replaced planter 2 with 3 in PT "+cfg.name);
+        			//appliedPlanterTerminalReplace = true;
+        			flag = true;
+        			break;
+        		}
+        		if (flag || (arr != null && i < arr.Length && cfg.reqTypes[i] != null)) {
+        			arr[i].resType = cfg.reqTypes[i];
+        			arr[i].quantity = cfg.reqQuantities[i];
+        		}
+        	}
+        	TTUtil.log("Finished replacing production terminal resources "+cfg.reqTypes.Select(res => res.toDebugString()).toDebugString()+" => "+arr.Select(res => res.resType.toDebugString()).toDebugString());
         }
-        
+        /*
         private static void replacePlanter2With3(ProductionTerminalDefinition.ResourceRequirementData res) {
+        	TTUtil.log("res entry "+res.resType.toDebugString()+"x"+res.quantity);
         	if (res.resType != null && res.resType.uniqueId == t2Planter.uniqueId) {
         		res.resType = t3Planter.item;
         		changedPTResources = true;
         	}
-        }
+        }*/
 
 	}
 }

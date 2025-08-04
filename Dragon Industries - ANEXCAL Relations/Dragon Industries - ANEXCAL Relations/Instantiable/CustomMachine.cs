@@ -31,7 +31,7 @@ namespace ReikaKalseki.DIANEXCAL {
         
 		public string name { get { return resource.name; } }
         
-		public ResourceInfo item { get { return EMU.Resources.GetResourceInfoByName(name); } }
+		public ResourceInfo item { get; private set; }
 		
 		public bool isUnlocked { get { return tech.isUnlocked; } }
 		
@@ -96,11 +96,13 @@ namespace ReikaKalseki.DIANEXCAL {
 					TTUtil.log("Machine '"+this+"' has no tech!");
 				
 				EMU.Events.GameDefinesLoaded += () => {
-					EMU.Resources.GetResourceInfoByName(name, true).unlock = unlock;
+					item = EMU.Resources.GetResourceInfoByName(name, true);
+					item.rawSprite = item.sprite;
+					item.unlock = unlock;
 				};
 				
 				EMU.Events.TechTreeStateLoaded += () => {
-					recipeID = TTUtil.getRecipeID(EMU.Resources.GetResourceIDByName(name));
+					recipeID = TTUtil.getRecipeIDByOutput(EMU.Resources.GetResourceIDByName(name));
 					if (recipeID != -1)
 						unlock.unlockedRecipes.Add(registeredRecipe);
 				};

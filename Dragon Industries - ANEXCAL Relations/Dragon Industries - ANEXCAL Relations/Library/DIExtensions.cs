@@ -382,6 +382,10 @@ namespace ReikaKalseki.DIANEXCAL
 			return s;
 		}
 		
+		public static string toDebugString(this ResourceInfo res) {
+			return res == null ? "NULL" : res.name+" ("+res.displayName+") ["+res.uniqueId+"]";
+		}
+		
 		public static E pop<E>(this IList<E> c) {
 			E ret = c[0];
 			c.RemoveAt(0);

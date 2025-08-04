@@ -123,15 +123,15 @@ namespace ReikaKalseki.Botanerranean {
 			}
 		}
 
-		[HarmonyPatch(typeof(ProductionTerminalInstance))] 
-		[HarmonyPatch("RefreshResourceRequirements")]
+		[HarmonyPatch(typeof(RepairableElevatorInstance))] 
+		[HarmonyPatch("SetResourceRequirements")]
 		//[HarmonyDebug]
-		public static class PTUpgradeResourceHook {
+		public static class UpgradeResourceHook {
 
 			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
 				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
 				try {
-					InstructionHandlers.patchInitialHook(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.Botanerranean.BotanerraneanMod", "onProdTerminalResourceUpdate", false, typeof(ProductionTerminalInstance).MakeByRefType()));
+					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Ldarg_3), InstructionHandlers.createMethodCall("ReikaKalseki.Botanerranean.BotanerraneanMod", "onProdTerminalResourceUpdate", false, typeof(ProductionTerminalDefinition.ResourceRequirementData[]).MakeByRefType(), typeof(GatedDoorConfiguration)));
 					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
 				}
 				catch (Exception e) {

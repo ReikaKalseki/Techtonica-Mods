@@ -26,6 +26,9 @@ namespace ReikaKalseki.DIANEXCAL {
         public static DIMod instance;
         
         public static event Action onRecipesLoaded;
+        public static event Action onDefinesLoadedFirstTime;
+        
+        private static bool definesLoadedFired;
 
         public DIMod() : base() {
             instance = this;
@@ -65,6 +68,17 @@ namespace ReikaKalseki.DIANEXCAL {
         		ResourceInfo ri = EMU.Resources.GetResourceInfoByName(id);
 				RenderUtil.dumpTexture(TTUtil.diDLL, id, ri.sprite.texture);
 			}*/
+        	if (!definesLoadedFired) {
+	        	if (onDefinesLoadedFirstTime != null) {
+	        		try {
+	        			onDefinesLoadedFirstTime.Invoke();
+	        		}
+	        		catch (Exception ex) {
+	        			TTUtil.log("Exception caught when handling one-time defines load: "+ex, TTUtil.diDLL);
+	        		}
+	        	}
+        		definesLoadedFired = true;
+        	}
         }
         
 		public static void onRecipeDataLoaded() {

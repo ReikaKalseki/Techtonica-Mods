@@ -79,7 +79,7 @@ namespace ReikaKalseki.SierraTech {
 				};
 				sandPumpCoreTech.register();
 
-				EMU.Events.GameDefinesLoaded += onDefinesLoaded;
+				DIMod.onDefinesLoadedFirstTime += onDefinesLoaded;
 				
 				DIMod.onRecipesLoaded += onRecipesLoaded;
 			}

@@ -25,6 +25,7 @@ namespace ReikaKalseki.DIANEXCAL {
 		//public static readonly string savesDir = "C:/Users/Reika/AppData/LocalLow/Fire Hose Games/Techtonica";
 		
 		private static readonly Dictionary<int, int> recipeIDs = new Dictionary<int, int>();
+		private static SchematicsRecipeData[] allRecipes;
 
         public static bool allowDIDLL = false;
 	    
@@ -206,10 +207,10 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	FieldInfo f = typeof(GameDefines).GetField("_cachedRecipeLookupArray", BindingFlags.Instance | BindingFlags.NonPublic);
 	    	if (f == null)
 	    		throw new Exception("No recipe field!");
-	    	SchematicsRecipeData[] arr = (SchematicsRecipeData[])f.GetValue(GameDefines.instance);
-	    	if (arr == null)
+	    	allRecipes = (SchematicsRecipeData[])f.GetValue(GameDefines.instance);
+	    	if (allRecipes == null)
 	    		throw new Exception("No recipe array!");
-	    	foreach (SchematicsRecipeData rec in arr) {
+	    	foreach (SchematicsRecipeData rec in allRecipes) {
 	    		if (rec == null)
 	    			continue;
 	    		if (rec.outputTypes.Length > 0 && rec.outputTypes[0] != null) {
@@ -219,8 +220,22 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	log("Compiled recipe cache with "+recipeIDs.Count+" entries", diDLL);
 	    }
 	    
-	    public static int getRecipeID(int res) {
+	    public static int getRecipeIDByOutput(int res) {
+	    	if (recipeIDs == null || recipeIDs.Count == 0)
+	    		throw new Exception("Checked recipes before recipes are loaded!");
 	    	return recipeIDs.ContainsKey(res) ? recipeIDs[res] : -1;
+	    }
+	    
+	    public static SchematicsRecipeData getRecipe(Predicate<SchematicsRecipeData> check) {
+	    	if (allRecipes == null || allRecipes.Length == 0)
+	    		throw new Exception("Checked recipes before recipes are loaded!");
+	    	return allRecipes.ToList().Find(check);
+	    }
+	    
+	    public static List<SchematicsRecipeData> getRecipes(Predicate<SchematicsRecipeData> check) {
+	    	if (allRecipes == null || allRecipes.Length == 0)
+	    		throw new Exception("Checked recipes before recipes are loaded!");
+	    	return allRecipes.ToList().FindAll(check);
 	    }
 	    
 	    public static bool isSeed(ResourceInfo ri) {
