@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 
 using BepInEx;
+using BepInEx.Configuration;
 
 using ReikaKalseki.DIANEXCAL;
 
@@ -64,7 +65,6 @@ namespace ReikaKalseki.DIANEXCAL {
         		ResourceInfo ri = EMU.Resources.GetResourceInfoByName(id);
 				RenderUtil.dumpTexture(TTUtil.diDLL, id, ri.sprite.texture);
 			}*/
-        	
         }
         
 		public static void onRecipeDataLoaded() {
@@ -108,6 +108,19 @@ namespace ReikaKalseki.DIANEXCAL {
         
         public static bool interceptProtection(bool prot) {
         	return prot && protectionZonesActive;
+        }
+        
+        public static void setMassScanRange(int r = 0) {
+        	Type t = InstructionHandlers.getTypeBySimpleName("MassScan.MassScan");
+        	if (t == null) {
+        		TTUtil.log("No mass scan DLL found", TTUtil.diDLL);
+        	}
+        	else {
+        		FieldInfo fi = t.GetField("ScanRange", BindingFlags.NonPublic | BindingFlags.Static);
+        		ConfigEntry<int> c = (ConfigEntry<int>)fi.GetValue(null);
+        		TTUtil.log("Changing mass scan range from "+c.Value+" to "+r);
+        		c.Value = r;
+        	}
         }
 
 	}

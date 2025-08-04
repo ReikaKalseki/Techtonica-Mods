@@ -461,5 +461,9 @@ namespace ReikaKalseki.DIANEXCAL
 
         }
 		
+		public static int multiplyBy(this int num, double fac) {
+			return (int)Math.Floor(num*fac);
+		}
+		
 	}
 }

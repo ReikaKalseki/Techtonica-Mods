@@ -59,8 +59,8 @@ namespace ReikaKalseki.DIANEXCAL {
 		public CustomTech createUnlock(Unlock.TechCategory cat, ResearchCoreDefinition.CoreType type, int cores) {
 			tech = new CustomTech(cat, type, cores);
 			tech.displayName = name;
-			tech.description = item.description;
-			tech.sprite = item.sprite;
+			tech.description = resource.description;
+			tech.sprite = resource.sprite;
 			return tech;
 		}
 		
@@ -105,10 +105,10 @@ namespace ReikaKalseki.DIANEXCAL {
 						unlock.unlockedRecipes.Add(registeredRecipe);
 				};
 				
-				TTUtil.log("Registered machine " + this, TTUtil.tryGetModDLL(true));
+				TTUtil.log("Registered machine " + this);
 			}
 			catch (Exception ex) {
-				TTUtil.log("Failed to register "+this+": "+ex.ToString(), TTUtil.tryGetModDLL(true));
+				TTUtil.log("Failed to register "+this+": "+ex.ToString());
 			}
 		}
 		

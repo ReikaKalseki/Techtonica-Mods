@@ -122,5 +122,26 @@ namespace ReikaKalseki.Botanerranean {
 				return codes.AsEnumerable();
 			}
 		}
+
+		[HarmonyPatch(typeof(ProductionTerminalInstance))] 
+		[HarmonyPatch("RefreshResourceRequirements")]
+		//[HarmonyDebug]
+		public static class PTUpgradeResourceHook {
+
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+				try {
+					InstructionHandlers.patchInitialHook(codes, new CodeInstruction(OpCodes.Ldarg_0), InstructionHandlers.createMethodCall("ReikaKalseki.Botanerranean.BotanerraneanMod", "onProdTerminalResourceUpdate", false, typeof(ProductionTerminalInstance).MakeByRefType()));
+					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
+				}
+				catch (Exception e) {
+					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
+					FileLog.Log(e.Message);
+					FileLog.Log(e.StackTrace);
+					FileLog.Log(e.ToString());
+				}
+				return codes.AsEnumerable();
+			}
+		}
 	}
 }

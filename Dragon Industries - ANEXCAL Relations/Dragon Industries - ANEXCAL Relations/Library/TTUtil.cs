@@ -18,7 +18,7 @@ namespace ReikaKalseki.DIANEXCAL {
 	public static class TTUtil {
 	    
 	    public static readonly Assembly diDLL = Assembly.GetExecutingAssembly();
-	    public static readonly Assembly gameDLL = Assembly.GetAssembly(typeof(GridManager));
+	    public static readonly Assembly gameDLL = Assembly.GetAssembly(typeof(ThresherDefinition));
 	    public static readonly Assembly gameDLL2 = Assembly.GetAssembly(typeof(FluffyUnderware.Curvy.CurvyConnection));
 	    
 	    public static readonly string gameDir = Directory.GetParent(gameDLL.Location).Parent.Parent.FullName; //managed -> _Data -> root
@@ -169,6 +169,14 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	return u;
 	    }
 	    
+	    public static void setUnlockRecipes(string name, params SchematicsRecipeData[] recs) {
+	    	Unlock u = getUnlock(name);
+	    	List<SchematicsRecipeData> li = u.unlockedRecipes;
+	    	li.Clear();
+	    	li.AddRange(recs.ToList());
+	    	log("Unlock '"+name+"' ("+u.displayName+") now unlocks the following recipes: "+li.toDebugString());
+	    }
+	    
 	    public static TechTreeState.ResearchTier getTierAfter(TechTreeState.ResearchTier tier, int steps = 1) {
 	    	int val = (int)tier;
 	    	val *= MathUtil.intpow2(2, steps);
@@ -215,11 +223,41 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	return recipeIDs.ContainsKey(res) ? recipeIDs[res] : -1;
 	    }
 	    
+	    public static bool isSeed(ResourceInfo ri) {
+	    	return ri.uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.KindlevineSeed) || ri.uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.ShiverthornSeed) || ri.uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.SesamiteSeed);
+	    }
+	    
+	    public static void setDrillUsableUntil(string name, ElevatorLevels lvl, bool include = true) {
+        	ResourceInfo res = EMU.Resources.GetResourceInfoByName(name);
+        	res.digFuelTier = (int)lvl;
+        	if (include)
+        		res.digFuelTier++;
+        	TTUtil.log(res.displayName+" dig tier now "+res.digFuelTier+" ("+(include ? "<=" : "<")+" "+lvl+")");
+	    }
+	    
 	    public enum ProductionTerminal {
 	    	LIMA,
 	    	VICTOR,
 	    	XRAY,
 	    	SIERRA,
+	    }
+	    
+	    public enum ElevatorLevels {
+	    	LIMA,
+	    	VICTOR,
+	    	STORAGE,
+	    	HYDRO,
+	    	ADMIN,
+	    	XRAY, //6
+	    	EXCALIBUR,
+	    	RESEARCH,
+	    	FOUNDRY, //9
+	    	BARRACKS,
+	    	FREIGHT,	    	
+	    	SIERRA, //12
+	    	ARCHIVE,
+	    	LABORATORY,
+	    	MECH,
 	    }
 		
 	}

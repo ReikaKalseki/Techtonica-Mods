@@ -38,6 +38,10 @@ namespace ReikaKalseki.DIANEXCAL {
 			}
 		}
 		
+		public CustomTech(Unlock.TechCategory cat, Unlock.RequiredCores cores) : this(cat, cores.type, cores.number) {
+			
+		}
+		
 		public CustomTech(Unlock.TechCategory cat, ResearchCoreDefinition.CoreType type, int cores) {
 			category = cat;
 			coreTypeNeeded = type;
@@ -52,10 +56,10 @@ namespace ReikaKalseki.DIANEXCAL {
 					if (finalFixes != null)
 						finalFixes.Invoke();
 				};
-				TTUtil.log("Registered tech "+this, TTUtil.tryGetModDLL(true));
+				TTUtil.log("Registered tech "+this);
 			}
 			catch (Exception ex) {
-				TTUtil.log("Failed to register "+this+": "+ex.ToString(), TTUtil.tryGetModDLL(true));
+				TTUtil.log("Failed to register "+this+": "+ex.ToString());
 			}
 		}
 		
