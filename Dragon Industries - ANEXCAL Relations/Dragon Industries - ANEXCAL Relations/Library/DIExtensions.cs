@@ -8,6 +8,8 @@ using System.Globalization;
 using System.Collections;
 using System.Collections.Generic;
 
+using EquinoxsModUtils;
+
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -347,7 +349,7 @@ namespace ReikaKalseki.DIANEXCAL
 		}
 		*/
 		public static string toDebugString<K, V>(this IDictionary<K, V> dict) {
-			return dict.Count+":{" + string.Join(",", dict.Select(kv => kv.Key + "=" + stringify(kv.Value)).ToArray()) + "}";//return toDebugString((IDictionary<object, object>)dict);
+			return dict.Count+":{" + string.Join(",", dict.Select(kv => stringify(kv.Key) + "=" + stringify(kv.Value)).ToArray()) + "}";//return toDebugString((IDictionary<object, object>)dict);
 		}
 		
 		public static string toDebugString<E>(this IEnumerable<E> c) {
@@ -367,7 +369,7 @@ namespace ReikaKalseki.DIANEXCAL
 				return "Errored misaligned-in recipe "+rec.name+" "+rec.ingTypes.toDebugString()+"/"+rec.ingQuantities.toDebugString();
 			if (rec.outputTypes.Length != rec.outputQuantities.Length)
 				return "Errored misaligned-out recipe "+rec.name+" "+rec.outputTypes.toDebugString()+"/"+rec.outputQuantities.toDebugString();
-			string s = "";
+			string s = "["+rec.craftingMethod+"] ("+rec.duration.ToString("0.0")+"s) {";
 			for (int i = 0; i < rec.ingTypes.Length; i++) {
 				s += (rec.ingTypes[i] == null ? "NULLRESIN" : rec.ingTypes[i].displayName)+"x"+rec.ingQuantities[i];
 				if (i < rec.ingTypes.Length-1)
@@ -379,11 +381,27 @@ namespace ReikaKalseki.DIANEXCAL
 				if (i < rec.outputTypes.Length-1)
 					s += "+";
 			}
+			s += "}";
+			if (rec.chargeGeneratedWhenProcessed > 0) {
+				s += " & "+rec.chargeGeneratedWhenProcessed+"kJ, up to "+rec.maxChargeGenerated+" ("+(rec.maxChargeGenerated/rec.chargeGeneratedWhenProcessed)+"x)";
+			}
 			return s;
 		}
 		
 		public static string toDebugString(this ResourceInfo res) {
 			return res == null ? "NULL" : res.name+" ("+res.displayName+") ["+res.uniqueId+"]";
+		}
+		
+		public static string toDebugString(this Unlock.RequiredCores c) {
+			return c.type+" x"+c.number;
+		}
+		
+		public static string toDebugString(this Unlock u) {
+			return u == null ? "NULL" : u.category+"/"+u.name+" ('"+u.getDisplayName()+"') @ "+TTUtil.getTierDescription(u.requiredTier)+","+u.treePosition+" #"+u.coresNeeded.toDebugString()+" > "+u.unlockedRecipes.toDebugString();
+		}
+		
+		public static string getDisplayName(this Unlock u) {
+			return LocsUtility.TranslateStringFromHash(u.displayNameHash, null, null); //u.displayName is null/empty
 		}
 		
 		public static E pop<E>(this IList<E> c) {
@@ -427,6 +445,14 @@ namespace ReikaKalseki.DIANEXCAL
 				return "dict:"+((IDictionary<object, object>)obj).toDebugString();
 			else if (obj.isEnumerable())
 				return "enumerable:"+((IEnumerable<object>)obj).toDebugString();
+			else if (obj is Unlock)
+				return ((Unlock)obj).toDebugString();
+			else if (obj is SchematicsRecipeData)
+				return ((SchematicsRecipeData)obj).toDebugString();
+			else if (obj is Unlock.RequiredCores)
+				return ((Unlock.RequiredCores)obj).toDebugString();
+			else if (obj is ResourceInfo)
+				return ((ResourceInfo)obj).toDebugString();
 			return obj.ToString();
 		}
 		
@@ -466,7 +492,42 @@ namespace ReikaKalseki.DIANEXCAL
         }
 		
 		public static int multiplyBy(this int num, double fac) {
-			return (int)Math.Floor(num*fac);
+			return (int)Math.Floor(Math.Round(num*fac));
+		}
+		
+		public static void scalePower(this SchematicsRecipeData rec, double f, double maxScale = 1) {
+			rec.chargeGeneratedWhenProcessed = rec.chargeGeneratedWhenProcessed.multiplyBy(f);
+			rec.maxChargeGenerated = rec.maxChargeGenerated.multiplyBy(f*maxScale);
+			TTUtil.log("Power yield from "+rec.toDebugString()+" after scaled by "+f+"/"+maxScale);
+		}
+		
+		public static int getCost(this SchematicsRecipeData rec, string name) {
+			return rec.getCost(EMU.Resources.GetResourceIDByName(name));
+		}
+		
+		public static int getCost(this SchematicsRecipeData rec, int id) {
+			for (int i = 0; i < rec.ingTypes.Length; i++) {
+				if (rec.ingTypes[i].uniqueId == id)
+					return rec.ingQuantities[i];
+			}
+			return 0;
+		}
+		
+		public static int getYield(this SchematicsRecipeData rec, string name) {
+			return rec.getYield(EMU.Resources.GetResourceIDByName(name));
+		}
+		
+		public static int getYield(this SchematicsRecipeData rec, int id) {
+			for (int i = 0; i < rec.outputTypes.Length; i++) {
+				if (rec.outputTypes[i].uniqueId == id)
+					return rec.outputQuantities[i];
+			}
+			return 0;
+		}
+		
+		public static void adjustCoreCost(this Unlock u, double f) {
+			u.coresNeeded = u.coresNeeded.Select(c => new Unlock.RequiredCores{type=c.type, number=c.number.multiplyBy(f)}).ToList();
+			TTUtil.log("Adjusting core cost of "+u.name+" to "+u.coresNeeded.toDebugString());
 		}
 		
 	}

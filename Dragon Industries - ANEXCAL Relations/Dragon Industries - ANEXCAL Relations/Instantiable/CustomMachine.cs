@@ -26,8 +26,6 @@ namespace ReikaKalseki.DIANEXCAL {
 		private CustomTech tech;
 		
 		private NewRecipeDetails recipe;
-		
-		private int recipeID = -1;
         
 		public string name { get { return resource.name; } }
         
@@ -37,7 +35,7 @@ namespace ReikaKalseki.DIANEXCAL {
 		
 		public Unlock unlock { get { return TTUtil.getUnlock(name); } }
 		
-		public SchematicsRecipeData registeredRecipe { get { return GameDefines.instance.GetSchematicsRecipeDataById(recipeID); } }
+		public SchematicsRecipeData registeredRecipe { get; private set; }
 		
 		public CustomMachine(string name, string desc, string sprite, string unlock, string template) {
 			resource = new NewResourceDetails();
@@ -102,8 +100,8 @@ namespace ReikaKalseki.DIANEXCAL {
 				};
 				
 				EMU.Events.TechTreeStateLoaded += () => {
-					recipeID = TTUtil.getRecipeIDByOutput(EMU.Resources.GetResourceIDByName(name));
-					if (recipeID != -1)
+					registeredRecipe = TTUtil.getRecipesByOutput(name)[0];
+					if (registeredRecipe != null)
 						unlock.unlockedRecipes.Add(registeredRecipe);
 				};
 				

@@ -180,6 +180,21 @@ namespace ReikaKalseki.DIANEXCAL {
 		public static Vector3 getRandomPointAtSetDistance(Vector3 pos, float dist) {
 			return pos+new Vector3(UnityEngine.Random.Range(-1F, 1F), UnityEngine.Random.Range(-1F, 1F), UnityEngine.Random.Range(-1F, 1F)).setLength(dist);
 		}
+
+		public static int roundDownToX(int val, int multiple) {
+			int ret = val - val%multiple;
+			if (val < 0)
+				ret -= multiple;
+			return ret;
+		}
+	
+		public static int roundUpToX(int val, int multiple) {
+			return roundDownToX(val, multiple)+multiple;
+		}
+	
+		public static int roundToNearestX(int val, int multiple) {
+			return ((val+multiple/2*(int)Math.Sign(val))/multiple)*multiple;
+		}
 		
 	}
 }

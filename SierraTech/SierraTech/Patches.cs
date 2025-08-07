@@ -11,20 +11,18 @@ using ReikaKalseki.DIANEXCAL;
 
 namespace ReikaKalseki.SierraTech {
 
-	public static class Patches {/*
+	public static class Patches {
 
-		[HarmonyPatch(typeof(SandVolume))] 
-		[HarmonyPatch("Update")]
+		[HarmonyPatch(typeof(SandVolume), new Type[]{typeof(byte), typeof(BakedSandVolume), typeof(float), typeof(float)})]
+		[HarmonyPatch("Initialize")]
 		//[HarmonyDebug]
-		public static class SandVolumeTickHook {
+		public static class SandVolumeInitHook {
 
 			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
-				List<CodeInstruction> codes = new List<CodeInstruction>();
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
 				try {
-					codes.Add(new CodeInstruction(OpCodes.Ldarg_0));
-					codes.Add(new CodeInstruction(OpCodes.Ldarg_1));
-					codes.Add(InstructionHandlers.createMethodCall("ReikaKalseki.SierraTerra.SierraTerraMod", "tickSandVolume", false, typeof(SandVolume), typeof(float)));
-					codes.Add(new CodeInstruction(OpCodes.Ret));
+					int idx = InstructionHandlers.getInstruction(codes, 0, 0, OpCodes.Stfld, "SandVolume", "strataSandDigRateMultiplier");
+					codes[idx-1] = new CodeInstruction(OpCodes.Ldc_R4, 1F); //replace load of sandDigRateMultiplier param, force to 1
 					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
 				}
 				catch (Exception e) {
@@ -35,7 +33,7 @@ namespace ReikaKalseki.SierraTech {
 				}
 				return codes.AsEnumerable();
 			}
-		}*/
+		}
 
 		[HarmonyPatch(typeof(SandVolume))] 
 		[HarmonyPatch("Update")]

@@ -121,7 +121,7 @@ namespace ReikaKalseki.Botanerranean {
 				}
 				return codes.AsEnumerable();
 			}
-		}
+		}/*
 
 		[HarmonyPatch(typeof(RepairableElevatorInstance))] 
 		[HarmonyPatch("SetResourceRequirements")]
@@ -131,7 +131,7 @@ namespace ReikaKalseki.Botanerranean {
 			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
 				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
 				try {
-					InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Ldarg_3), InstructionHandlers.createMethodCall("ReikaKalseki.Botanerranean.BotanerraneanMod", "onProdTerminalResourceUpdate", false, typeof(ProductionTerminalDefinition.ResourceRequirementData[]).MakeByRefType(), typeof(GatedDoorConfiguration)));
+					InstructionHandlers.patchInitialHook(codes, new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Ldarg_3), InstructionHandlers.createMethodCall("ReikaKalseki.Botanerranean.BotanerraneanMod", "onProdTerminalResourceUpdate", false, typeof(ProductionTerminalDefinition.ResourceRequirementData[]).MakeByRefType(), typeof(GatedDoorConfiguration)));
 					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
 				}
 				catch (Exception e) {
@@ -142,6 +142,6 @@ namespace ReikaKalseki.Botanerranean {
 				}
 				return codes.AsEnumerable();
 			}
-		}
+		}*/
 	}
 }

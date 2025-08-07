@@ -24,7 +24,8 @@ namespace ReikaKalseki.DIANEXCAL {
 	    public static readonly string gameDir = Directory.GetParent(gameDLL.Location).Parent.Parent.FullName; //managed -> _Data -> root
 		//public static readonly string savesDir = "C:/Users/Reika/AppData/LocalLow/Fire Hose Games/Techtonica";
 		
-		private static readonly Dictionary<int, int> recipeIDs = new Dictionary<int, int>();
+		private static readonly Dictionary<int, List<int>> recipeIDs = new Dictionary<int, List<int>>();
+		private static readonly Dictionary<ProductionTerminal, TechTreeState.ResearchTier> terminalTiers = new Dictionary<ProductionTerminal, TechTreeState.ResearchTier>();
 		private static SchematicsRecipeData[] allRecipes;
 
         public static bool allowDIDLL = false;
@@ -37,10 +38,6 @@ namespace ReikaKalseki.DIANEXCAL {
             gameDLL,
             gameDLL2
         };
-	    
-	    static TTUtil() {
-			
-	    }
 	    
 	    private static bool evaluateReikaPC() {
 	    	try {
@@ -214,16 +211,24 @@ namespace ReikaKalseki.DIANEXCAL {
 	    		if (rec == null)
 	    			continue;
 	    		if (rec.outputTypes.Length > 0 && rec.outputTypes[0] != null) {
-	    			recipeIDs[rec.outputTypes[0].uniqueId] = rec.uniqueId;
+	    			int id = rec.outputTypes[0].uniqueId;
+	    			if (!recipeIDs.ContainsKey(id))
+	    				recipeIDs[id] = new List<int>();
+	    			recipeIDs[id].Add(rec.uniqueId);
 	    		}
 	    	}
 	    	log("Compiled recipe cache with "+recipeIDs.Count+" entries", diDLL);
 	    }
 	    
-	    public static int getRecipeIDByOutput(int res) {
+	    public static List<SchematicsRecipeData> getRecipesByOutput(string name) {
+	    	return getRecipesByOutput(EMU.Resources.GetResourceIDByName(name));
+	    }
+	    
+	    public static List<SchematicsRecipeData> getRecipesByOutput(int res) {
 	    	if (recipeIDs == null || recipeIDs.Count == 0)
 	    		throw new Exception("Checked recipes before recipes are loaded!");
-	    	return recipeIDs.ContainsKey(res) ? recipeIDs[res] : -1;
+	    	List<int> ids = recipeIDs.ContainsKey(res) ? recipeIDs[res] : null;
+	    	return ids == null ? null : ids.Select(id => GameDefines.instance.GetSchematicsRecipeDataById(id)).ToList();
 	    }
 	    
 	    public static SchematicsRecipeData getRecipe(Predicate<SchematicsRecipeData> check) {
@@ -250,6 +255,20 @@ namespace ReikaKalseki.DIANEXCAL {
         	TTUtil.log(res.displayName+" dig tier now "+res.digFuelTier+" ("+(include ? "<=" : "<")+" "+lvl+")");
 	    }
 	    
+	    public static string getTierDescription(TechTreeState.ResearchTier tier) {
+	    	ProductionTerminal from = ProductionTerminal.LIMA;
+	    	foreach (KeyValuePair<ProductionTerminal, TechTreeState.ResearchTier> kvp in terminalTiers) {
+	    		if (kvp.Value <= tier) {
+	    			from = kvp.Key;
+	    		}
+	    	}
+	    	return from+"_T"+(getEnumIndex(tier)-getEnumIndex(terminalTiers[from])+1);
+	    }
+	    
+	    public static int getEnumIndex(object e)/* where E : System.Enum not possible < C#7.3*/{
+	    	return Array.IndexOf(Enum.GetValues(e.GetType()), e);
+	    }
+	    
 	    public enum ProductionTerminal {
 	    	LIMA,
 	    	VICTOR,
@@ -273,6 +292,13 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	ARCHIVE,
 	    	LABORATORY,
 	    	MECH,
+	    }
+	    
+	    static TTUtil() {
+	    	terminalTiers[ProductionTerminal.LIMA] = TechTreeState.ResearchTier.Tier0;
+	    	terminalTiers[ProductionTerminal.VICTOR] = TechTreeState.ResearchTier.Tier4;
+	    	terminalTiers[ProductionTerminal.XRAY] = TechTreeState.ResearchTier.Tier11;
+	    	terminalTiers[ProductionTerminal.SIERRA] = TechTreeState.ResearchTier.Tier16;
 	    }
 		
 	}

@@ -164,7 +164,7 @@ namespace ReikaKalseki.Botanerranean {
 				makeSeedToFuel(EMU.Names.Resources.SesamiteSeed);
 
 				DIMod.onDefinesLoadedFirstTime += onDefinesLoaded;
-				EMU.Events.TechTreeStateLoaded += onTechsLoaded;
+				DIMod.onTechsLoadedFirstTime += onTechsLoaded;
 				
 				DIMod.onRecipesLoaded += onRecipesLoaded;
 			}
@@ -204,19 +204,8 @@ namespace ReikaKalseki.Botanerranean {
 		}
         
         private static void onRecipesLoaded() {
-        	int id2 = EMU.Resources.GetResourceIDByName(EMU.Names.Resources.PlanterMKII);
-        	int id3 = EMU.Resources.GetResourceIDByName(t3Planter.name);
-        	planter2Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeIDByOutput(id2));
-        	planter3Recipe = GameDefines.instance.GetSchematicsRecipeDataById(TTUtil.getRecipeIDByOutput(id3));
-        	
-        	if (planter2Recipe == null) {
-        		TTUtil.log("No planter 2 recipe (id="+id2+")");
-        		return;
-        	}
-        	if (planter3Recipe == null) {
-        		TTUtil.log("No planter 3 recipe (id="+id3+")");
-        		return;
-        	}
+        	planter2Recipe = TTUtil.getRecipesByOutput(EMU.Names.Resources.PlanterMKII)[0];
+        	planter3Recipe = TTUtil.getRecipesByOutput(t3Planter.name)[0];
         	
         	planter3Recipe.ingTypes = new ResourceInfo[planter2Recipe.ingTypes.Length];
         	for (int i = 0; i < planter3Recipe.ingTypes.Length; i++) {
@@ -225,7 +214,7 @@ namespace ReikaKalseki.Botanerranean {
         			planter3Recipe.ingTypes[i] = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlanterMKII);
         	}
         	planter3Recipe.ingQuantities = new int[planter2Recipe.ingQuantities.Length];
-        	planter3Recipe.duration = planter2Recipe.duration*3;
+        	planter3Recipe.duration = planter2Recipe.duration*4;
         	Array.Copy(planter2Recipe.ingQuantities, planter3Recipe.ingQuantities, planter3Recipe.ingQuantities.Length);
         	TTUtil.compileRecipe(planter3Recipe);
         	
@@ -400,10 +389,6 @@ namespace ReikaKalseki.Botanerranean {
         			//appliedPlanterTerminalReplace = true;
         			flag = true;
         			break;
-        		}
-        		if (flag || (arr != null && i < arr.Length && cfg.reqTypes[i] != null)) {
-        			arr[i].resType = cfg.reqTypes[i];
-        			arr[i].quantity = cfg.reqQuantities[i];
         		}
         	}
         	TTUtil.log("Finished replacing production terminal resources "+cfg.reqTypes.Select(res => res.toDebugString()).toDebugString()+" => "+arr.Select(res => res.resType.toDebugString()).toDebugString());
