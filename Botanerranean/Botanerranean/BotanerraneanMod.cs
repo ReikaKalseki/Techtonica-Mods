@@ -112,10 +112,11 @@ namespace ReikaKalseki.Botanerranean {
 				
 				seedPlantmatterTech = new CustomTech(Unlock.TechCategory.Synthesis, "Seed Recycling I", "Reusing surplus seeds.", ResearchCoreDefinition.CoreType.Purple, 50);
 				seedPlantmatterTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 4), TTUtil.TechColumns.CENTERLEFT);
-				seedPlantmatterTech.setSprite(EMU.Names.Resources.Plantmatter);
+				seedPlantmatterTech.setSprite("SeedPlantmatter", false);
 				seedPlantmatterTech.register();
 				
 				seedCarbonTech = new CustomTech(Unlock.TechCategory.Synthesis, "Seed Recycling II", "A more lucrative use for surplus seeds.", ResearchCoreDefinition.CoreType.Blue, 20);
+				seedCarbonTech.setSprite("SeedToCarbon", false);
 				seedCarbonTech.finalFixes = () => {
 		        	TTUtil.log("Adjusting "+seedCarbonTech.displayName);
 		        	Unlock carb = TTUtil.getUnlock(EMU.Names.Unlocks.CarbonPowder);
@@ -125,7 +126,6 @@ namespace ReikaKalseki.Botanerranean {
 		        	tu.dependency1 = carb;
 		        	tu.dependency2 = seedPlantmatterTech.unlock;
 		        	tu.dependencies = new List<Unlock>{tu.dependency1, tu.dependency2};
-		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.ShiverthornSeed).sprite;
 				};
         		seedCarbonTech.setRecipes(kindlevineSeedSmelting, shiverthornSeedSmelting, kindlevineSeedBlasting, shiverthornSeedBlasting);
 				seedCarbonTech.register();			
@@ -167,7 +167,7 @@ namespace ReikaKalseki.Botanerranean {
 			
 			t2Planter = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlanterMKII);
 			t3Planter.item.description = t2Planter.description.Replace("rapid", "extremely fast");
-			t3.description = t3Planter.name;
+			t3.setDescription(t3Planter.item.description);
 		}
         
         private static void onRecipesLoaded() {

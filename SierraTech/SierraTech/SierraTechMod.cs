@@ -26,7 +26,7 @@ namespace ReikaKalseki.SierraTech {
 
 		public static SierraTechMod instance;
         
-		internal static CustomTech[] sandPumpBoostTechs;
+		internal static SandPumpTech[] sandPumpBoostTechs;
 		internal static CoreBoostTech sandPumpCoreTech;
 		internal static CustomTech machineScrappingTech;
 		internal static CustomTech sesamiteCarbonBrickTech;
@@ -35,6 +35,11 @@ namespace ReikaKalseki.SierraTech {
 		internal static CustomTech goldCrushingTech;
 		internal static CoreBoostTech spectralYieldCoreTech;
 		//internal static CustomTech bulkSesamiteGelTech;
+		
+		internal static CrusherPowerTrimTech crusherPowerTrim1;
+		internal static CrusherPowerTrimTech crusherPowerTrim2;
+		internal static CrusherPowerTrimTech crusherPowerTrim3;
+		internal static CrusherPowerTrimTech crusherPowerTrim4;
 		
 		internal static CustomRecipe carbonBrickRecipe;
 		internal static CustomRecipe goldCrushingRecipe;
@@ -78,7 +83,7 @@ namespace ReikaKalseki.SierraTech {
 					FileLog.Log(ex.ToString());
 				}
                 
-				sandPumpBoostTechs = new CustomTech[techLevels.Length];
+				sandPumpBoostTechs = new SandPumpTech[techLevels.Length];
 				for (int i = 0; i < sandPumpBoostTechs.Length; i++) {
 					sandPumpBoostTechs[i] = new SandPumpTech(techLevels[i]);
 					sandPumpBoostTechs[i].register();
@@ -90,9 +95,18 @@ namespace ReikaKalseki.SierraTech {
 				sandPumpCoreTech.setSprite(EMU.Names.Unlocks.SandPump);
 				sandPumpCoreTech.register();
 				
+				crusherPowerTrim1 = new CrusherPowerTrimTech(EMU.Names.Unlocks.ASMPowerTrimII);
+				crusherPowerTrim1.register();
+				crusherPowerTrim2 = new CrusherPowerTrimTech(EMU.Names.Unlocks.ASMPowerTrimIII);
+				crusherPowerTrim2.register();
+				crusherPowerTrim3 = new CrusherPowerTrimTech(EMU.Names.Unlocks.ASMPowerTrimIV);
+				crusherPowerTrim3.register();
+				crusherPowerTrim4 = new CrusherPowerTrimTech(EMU.Names.Unlocks.ASMPowerTrimV);
+				crusherPowerTrim4.register();
+				
 				sesamiteCarbonBrickTech = new CustomTech(Unlock.TechCategory.Synthesis, "Sesamite Blasting", "Enables blast smelting of carbon bricks from sesamite stems.", ResearchCoreDefinition.CoreType.Gold, 250);
 				sesamiteCarbonBrickTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 7), TTUtil.TechColumns.LEFT);
-				sesamiteCarbonBrickTech.setSprite(EMU.Names.Resources.CarbonPowderBrick);
+				sesamiteCarbonBrickTech.setSprite("SesamiteBlasting", false);
 				sesamiteCarbonBrickTech.register();
 				
 				carbonBrickRecipe = new CustomRecipe(sesamiteCarbonBrickTech.name, CraftingMethod.BlastSmelter);
@@ -116,7 +130,7 @@ namespace ReikaKalseki.SierraTech {
 				
 				machineScrappingTech = new CustomTech(Unlock.TechCategory.Synthesis, "Machine Scrapping", "Allows the crushing of machines into scrap ore.", ResearchCoreDefinition.CoreType.Gold, 250);
 				machineScrappingTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 7), TTUtil.TechColumns.MIDRIGHT); //max tier
-				machineScrappingTech.setSprite(EMU.Names.Unlocks.ScrapSeparation);
+				machineScrappingTech.setSprite("MachineScrapping", false);
 				machineScrappingTech.register();
 				
 				goldPowder = new CustomItem("Gold Powder", "Pulverized Gold Ore.", EMU.Names.Resources.CopperOrePowder, "GoldPowder");
@@ -202,7 +216,7 @@ namespace ReikaKalseki.SierraTech {
 				DIMod.onRecipesLoaded += onRecipesLoaded;
 				DIMod.onTechActivatedEvent += onTechActivated;
 				DIMod.onTechDeactivatedEvent += onTechDeactivated;
-				EMU.Events.GameLoaded += updateCoreEfficiency;
+				EMU.Events.GameLoaded += onTechStatesChanged;
 			}
 			catch (Exception e) {
 				TTUtil.log("Failed to load SierraTech: " + e);
@@ -219,8 +233,18 @@ namespace ReikaKalseki.SierraTech {
 		}
 		
 		private static void onTechsLoaded() {        	
-        	TTUtil.getUnlock(EMU.Names.Unlocks.SesamiteCrystalSynthesis).adjustCoreCost(0.333); //from 300 to 100
-        	TTUtil.getUnlock(EMU.Names.Unlocks.SesamitePowderExtraction).adjustCoreCost(2/3.5); //from 350 to 200
+			Unlock makeCrys = TTUtil.getUnlock(EMU.Names.Unlocks.SesamiteCrystalSynthesis);
+			Unlock crushCrys = TTUtil.getUnlock(EMU.Names.Unlocks.SesamitePowderExtraction);
+        	makeCrys.adjustCoreCost(0.333); //from 300 to 100
+        	crushCrys.adjustCoreCost(2/3.5); //from 350 to 200
+        	
+        	string[] desc1 = makeCrys.getDescription().Split('.');
+        	string[] desc2 = crushCrys.getDescription().Split('.');
+        	string temp = desc1[desc1.Length-2]; //-2 since last is empty after final '.'
+        	desc1[desc1.Length-2] = desc2[desc2.Length-2];
+        	desc2[desc2.Length-2] = temp;
+        	makeCrys.setDescription(string.Join(".", desc1));
+        	crushCrys.setDescription(string.Join(".", desc2));
         	
         	TTUtil.getUnlock(EMU.Names.Unlocks.ResearchCoreYellow).treePosition = (int)YELLOW_CORE_COLUMN;
         	//already there TTUtil.getUnlock(EMU.Names.Unlocks.SesamiteMutation).treePosition = (int)TTUtil.TechColumns.MIDLEFT;
@@ -247,14 +271,14 @@ namespace ReikaKalseki.SierraTech {
 		}
 		
 		public static void onTechActivated(int id) {
-			updateCoreEfficiency();
+			onTechStatesChanged();
 		}
 		
 		public static void onTechDeactivated(int id) {
-			updateCoreEfficiency();
+			onTechStatesChanged();
 		}
 		
-		private static void updateCoreEfficiency() {
+		private static void onTechStatesChanged() {
 			if (allCoreEfficiencyTech2.isUnlocked)
 				TechTreeState.coreEffiencyMultipliers = new float[]{1.5F, 1.5F, 1.5F, 1.5F, 1, 1};
 			else if (greenCoreEfficiencyTech.isUnlocked)
@@ -262,6 +286,22 @@ namespace ReikaKalseki.SierraTech {
 			else
 				TechTreeState.coreEffiencyMultipliers = new float[]{1.25F, 1, 1.25F, 1, 1, 1};
 			TTUtil.log("Efficiency techs: "+allCoreEfficiencyTech2.isUnlocked+"/"+greenCoreEfficiencyTech.isUnlocked+" > "+TechTreeState.coreEffiencyMultipliers.toDebugString());
+			
+			CrusherPowerTrimTech tech = getCrusherPowerTechLevel();
+			PowerNetwork.powerConsumptionMultipliers[(int)MachineTypeEnum.Crusher] = tech == null ? 1 : tech.efficiency;
+		}
+		
+		internal static CrusherPowerTrimTech getCrusherPowerTechLevel() {
+			if (crusherPowerTrim4.isUnlocked)
+				return crusherPowerTrim4;
+			else if (crusherPowerTrim3.isUnlocked)
+				return crusherPowerTrim3;
+			else if (crusherPowerTrim2.isUnlocked)
+				return crusherPowerTrim2;
+			else if (crusherPowerTrim1.isUnlocked)
+				return crusherPowerTrim1;
+			else
+				return null;
 		}
 		
 		internal static SandPumpTech.TechLevel getHighestPumpLevelUnlocked() {

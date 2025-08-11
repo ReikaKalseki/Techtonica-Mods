@@ -17,6 +17,8 @@ namespace ReikaKalseki.DIANEXCAL
 {
 	public static class DIExtensions {
 		
+		private static Dictionary<string, string> customTranslations;
+		
 		public static string setLeadingCase(this string s, bool upper) {
 			return (upper ? char.ToUpperInvariant(s[0]) : char.ToLowerInvariant(s[0]))+s.Substring(1);
 		}
@@ -404,6 +406,10 @@ namespace ReikaKalseki.DIANEXCAL
 			return LocsUtility.TranslateStringFromHash(u.displayNameHash, null, null); //u.displayName is null/empty
 		}
 		
+		public static string getDescription(this Unlock u) {
+			return LocsUtility.TranslateStringFromHash(u.descriptionHash, null, null); //u.displayName is null/empty
+		}
+		
 		public static E pop<E>(this IList<E> c) {
 			E ret = c[0];
 			c.RemoveAt(0);
@@ -530,7 +536,9 @@ namespace ReikaKalseki.DIANEXCAL
 			for (int i = 0; i < rec.ingTypes.Length; i++) {
 				if (rec.ingTypes[i].uniqueId == seek.uniqueId) {
 					rec.ingTypes[i] = EMU.Resources.GetResourceInfoByName(put);
+					float ratio = rec.runtimeIngQuantities[i]/(float)rec.ingQuantities[i];
 					rec.ingQuantities[i] = amt;
+					rec.runtimeIngQuantities[i] = (amt*ratio).CeilToInt();
 				}
 			}
 			TTUtil.log("Replaced "+from+" with "+put+" in "+rec.toDebugString());
@@ -539,6 +547,15 @@ namespace ReikaKalseki.DIANEXCAL
 		public static void adjustCoreCost(this Unlock u, double f) {
 			u.coresNeeded = u.coresNeeded.Select(c => new Unlock.RequiredCores{type=c.type, number=c.number.multiplyBy(f)}).ToList();
 			TTUtil.log("Adjusting core cost of "+u.name+" to "+u.coresNeeded.toDebugString());
+		}
+		
+		public static void setDescription(this Unlock u, string desc) {
+			string hash = LocsUtility.GetHashString(desc);
+			u.description = desc;
+			u.descriptionHash = hash;
+			if (customTranslations == null)
+				customTranslations = (Dictionary<string, string>)typeof(EMUAdditionsPlugin).GetField("customTranslations", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+			customTranslations[hash] = desc;
 		}
 		
 	}

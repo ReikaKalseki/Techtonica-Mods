@@ -100,11 +100,14 @@ namespace ReikaKalseki.DIANEXCAL {
 			try {
 				EMUAdditions.AddNewUnlock(this, true);
 				DIMod.onTechsLoadedFirstTime += () => {
-					unlock = TTUtil.getUnlock(displayName);
+					unlock = TTUtil.getUnlock(displayName, false);
 					if (unlock == null)
 						throw new Exception("Tech "+this+" failed to find its registered counterpart");
 					else
 						TTUtil.log("Tech "+name+" injected: "+unlock.toDebugString(), ownerMod);
+					
+					//unlock.descriptionHash = "";
+					//unlock.displayNameHash = "";
 					
 					if (unlockPositionReferenceTier != null) {
 						TTUtil.log("Aligning tech "+this+" to unlock '"+unlockPositionReferenceTier+"/"+unlockPositionReferenceColumn+"'", ownerMod);

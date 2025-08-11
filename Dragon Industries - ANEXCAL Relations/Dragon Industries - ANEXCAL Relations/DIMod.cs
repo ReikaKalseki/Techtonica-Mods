@@ -82,6 +82,7 @@ namespace ReikaKalseki.DIANEXCAL {
 				ResourceInfo res = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.SpectralCubeColorlessX100);
 				res.rawName = "Spectral Cube (Prismatic)";
 				res.rawSprite = TextureManager.createSprite(TextureManager.getTexture(TTUtil.diDLL, "Textures/WhiteCubeT2"));
+				res.description = "Artifact derived from those of local origin. Contains strange energies.";
 				
 				if (onDefinesLoadedFirstTime != null) {
 					try {
@@ -96,6 +97,12 @@ namespace ReikaKalseki.DIANEXCAL {
 		}
         
 		private static void onTechsLoaded() {
+			
+        	foreach (FieldInfo item in typeof(EMU.Names.Unlocks).GetFields()) {
+        		string id = (string)item.GetValue(null);
+        		Unlock ri = TTUtil.getUnlock(id);
+				RenderUtil.dumpTexture(TTUtil.diDLL, id, ri.sprite.texture);
+			}
 			if (!techsLoadedFired) {
 				if (onTechsLoadedFirstTime != null) {
 					try {
@@ -285,6 +292,34 @@ namespace ReikaKalseki.DIANEXCAL {
 				free.Add(spendable[i]-(TechTreeState.instance.usedResearchCores.Count > i ? TechTreeState.instance.usedResearchCores[i] : 0));
 			}
 			TTUtil.log("Final core budget: "+free.toDebugString(), TTUtil.diDLL);
+		}
+		
+		public static unsafe void onBuildDrillInspector(DrillInspectorItem gui, ref DrillInstance drill) {/*
+			string name = "RemainingYieldRow";
+			GameObject row = ObjectUtil.getChildObject(gui.output.transform.parent.gameObject, name);
+			if (!row) {
+				row = UnityEngine.Object.Instantiate(gui.output.gameObject);
+				row.transform.SetParent(gui.output.transform.parent);
+				row.transform.localPosition = gui.output.transform.localPosition;
+				row.transform.localRotation = gui.output.transform.localRotation;
+				row.transform.localScale = gui.output.transform.localScale;
+			}
+			row.SetActive(true);
+			ResourceRow rr = row.GetComponent<ResourceRow>();
+			ResourceInfo res = drill.TargetOre();
+			VoxelMaterial voxelType = VoxelManager.instance.GetVoxelType(ref drill.currentCoordinate, ref drill.gridInfo.strata);
+			int remaining = 0;
+			if (voxelType != null) {
+				GridPos gridPos = new GridPos(ref drill.currentCoordinate, ref drill.gridInfo.strata);
+				int chunkId = gridPos.chunkId;
+				int orCreateIndexForChunk = PendingVoxelChanges.instance.GetOrCreateIndexForChunk(ref chunkId);
+				ChunkPendingVoxelChanges ptr = PendingVoxelChanges.instance.chunkData[orCreateIndexForChunk];
+				ModifiedCoordData orAdd = ptr.GetOrAdd((int)gridPos.coordIndex);
+				remaining = drill.myDef.runtimeSettings.orePerDig*orAdd->integrity;
+			}
+			rr.resource.Set(res, 0, false, false);
+			rr.count.SetTextIfChanged(remaining + " remaining in targeted tile");
+			rr.speed.SetTextIfChanged("");*/
 		}
 
 	}

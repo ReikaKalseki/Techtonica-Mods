@@ -212,9 +212,55 @@ namespace ReikaKalseki.DIANEXCAL {
 				return codes.AsEnumerable();
 			}
 		}
+
+		[HarmonyPatch(typeof(DrillInspectorItem))] 
+		[HarmonyPatch("SetInspector")]
+		//[HarmonyDebug]
+		public static class DrillRemainingYieldInfo {
+
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+				try {
+					PatchLib.hookDrillInspector(codes);
+					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
+				}
+				catch (Exception e) {
+					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
+					FileLog.Log(e.Message);
+					FileLog.Log(e.StackTrace);
+					FileLog.Log(e.ToString());
+				}
+				return codes.AsEnumerable();
+			}
+		}
+
+		[HarmonyPatch(typeof(DrillInspectorItem))] 
+		[HarmonyPatch("SetBlastDrillInspector")]
+		//[HarmonyDebug]
+		public static class BlastDrillRemainingYieldInfo {
+
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+				List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+				try {
+					PatchLib.hookDrillInspector(codes);
+					FileLog.Log("Done patch " + MethodBase.GetCurrentMethod().DeclaringType);
+				}
+				catch (Exception e) {
+					FileLog.Log("Caught exception when running patch " + MethodBase.GetCurrentMethod().DeclaringType + "!");
+					FileLog.Log(e.Message);
+					FileLog.Log(e.StackTrace);
+					FileLog.Log(e.ToString());
+				}
+				return codes.AsEnumerable();
+			}
+		}
 		
 			
 		public static class PatchLib {
+			
+			public static void hookDrillInspector(List<CodeInstruction> codes) {
+				InstructionHandlers.patchEveryReturnPre(codes, new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Ldarg_1), InstructionHandlers.createMethodCall("ReikaKalseki.DIANEXCAL.DIMod", "onBuildDrillInspector", false, typeof(DrillInspectorItem), typeof(DrillInstance).MakeByRefType()));
+			}
 			
 			public static void redirectUpgradeCosts(List<CodeInstruction> codes) {
 				int idx = InstructionHandlers.getMethodCallByName(codes, 0, 0, "RepairableElevatorInstance", "SetResourceRequirements");
