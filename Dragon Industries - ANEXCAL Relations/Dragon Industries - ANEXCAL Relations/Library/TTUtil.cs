@@ -83,17 +83,17 @@ namespace ReikaKalseki.DIANEXCAL {
 	        return Assembly.GetCallingAssembly();
 		}
 		
-		public static void log(string s, Assembly a = null, int indent = 0) {
-			while (s.Length > 4096) {
-				string part = s.Substring(0, 4096);
+		public static void log(string msg, Assembly a = null, int indent = 0) {
+			while (msg.Length > 4096) {
+				string part = msg.Substring(0, 4096);
 				log(part, a);
-				s = s.Substring(4096);
+				msg = msg.Substring(4096);
 			}
 			string id = (a != null ? a : tryGetModDLL()).GetName().Name.ToUpperInvariant().Replace("PLUGIN_", "");
 			if (indent > 0) {
-				s = s.PadLeft(s.Length+indent, ' ');
+				msg = msg.PadLeft(msg.Length+indent, ' ');
 			}
-			UnityEngine.Debug.Log(id+": "+s);
+			UnityEngine.Debug.Log(id+": "+msg);
 		}
     
 	    public static bool canUseDebug() {
@@ -124,6 +124,13 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	}
 		}
 	    
+	    public static void setProducts(NewRecipeDetails rec, params object[] items) {
+	    	rec.outputs = new List<RecipeResourceInfo>();
+	    	for (int i = 0; i < items.Length; i += 2) {
+	    		rec.outputs.Add(new RecipeResourceInfo(){name = (string)items[i], quantity = (int)items[i+1]});
+	    	}
+		}
+	    
 	    public static void setIngredients(SchematicsRecipeData rec, params object[] items) {
 	    	int len = items.Length/2;
 	    	rec.ingTypes = new ResourceInfo[len];
@@ -141,28 +148,77 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	compileRecipe(rec);
 		}
 	    
+	    public static void setProducts(SchematicsRecipeData rec, params object[] items) {
+	    	int len = items.Length/2;
+	    	rec.outputTypes = new ResourceInfo[len];
+	    	rec.outputQuantities = new int[len];
+	    	for (int i = 0; i < items.Length; i += 2) {
+	    		int idx = i/2;
+	    		object ing = items[i];
+	    		ResourceInfo info = ing is ResourceInfo ? (ResourceInfo)ing : EMU.Resources.GetResourceInfoByName((string)ing);
+	    		if (info == null)
+	    			throw new Exception("No such product '"+ing+"'");
+	    		rec.outputTypes[idx] = info;
+	    		rec.outputQuantities[idx] = (int)items[i+1];
+        	};
+	    	//rec.ingTypes.ToList().ForEach(res => {if (res == null)throw new Exception("Null ingredient in "+rec.name);});
+	    	compileRecipe(rec);
+		}
+	    
 	    public static void compileRecipe(SchematicsRecipeData rec) {
 	    	rec.runtimeIngQuantities = rec.ingQuantities;
-	    	if (rec.ingTypes.Length > 3)
+	    	if (rec.ingTypes.Length > getMaxAllowedInputs(rec.craftingMethod))
 	    		throw new Exception("Too many ingredients in "+rec.toDebugString());
+	    	if (rec.outputTypes.Length > getMaxAllowedOutputs(rec.craftingMethod))
+	    		throw new Exception("Too many products in "+rec.toDebugString());
 	    	log("Recipe "+rec.name+" changed: {"+rec.toDebugString()+"}");
-	    }
+		}
 	    
-	    public static SchematicsRecipeData getSmelterRecipe(string item) {
-	    	ResourceInfo res = EMU.Resources.GetResourceInfoByName(item);
-	    	if (res == null)
-	    		throw new Exception("No such item '"+item+"'!");
-	    	List<SchematicsRecipeData> li = GameDefines.instance.GetValidSmelterRecipes(new List<int>{res.uniqueId}, 100, 100, false);
-	    	if (li.Count == 0)
-	    		log("No smelter recipe found using '"+item+"'!", diDLL);
-	    	return li.Count == 0 ? null : li[0];
-	    }
+		public static int getMaxAllowedInputs(CraftingMethod cm) {
+			switch (cm) {
+				case CraftingMethod.Assembler: 
+					return 3;
+				case CraftingMethod.Uncraftable: 
+					return 1;
+				case CraftingMethod.Smelter: 
+					return 1;
+				case CraftingMethod.Thresher: 
+					return 1;
+				case CraftingMethod.BlastSmelter: 
+					return 1;
+				case CraftingMethod.Planter:
+					return 1;
+				case CraftingMethod.Crusher:
+					return 2;
+			}
+	    	return -1;
+		}
 	    
-	    public static Unlock getUnlock(string name) {
+		public static int getMaxAllowedOutputs(CraftingMethod cm) {
+			switch (cm) {
+				case CraftingMethod.Assembler: 
+					return 1;
+				case CraftingMethod.Uncraftable: 
+					return 1;
+				case CraftingMethod.Smelter: 
+					return 1;
+				case CraftingMethod.Thresher: 
+					return 2;
+				case CraftingMethod.BlastSmelter: 
+					return 1;
+				case CraftingMethod.Planter:
+					return 1;
+				case CraftingMethod.Crusher:
+					return 20;
+			}
+	    	return -1;
+		}
+	    
+	    public static Unlock getUnlock(string name, bool throwIfNone = true) {
 	    	if (!EMU.LoadingStates.hasGameDefinesLoaded)
 	    		throw new Exception("Tried to access unlock database before defines were finished!");
 	    	Unlock u = EMU.Unlocks.GetUnlockByName(name, false);
-	    	if (u == null)
+	    	if (u == null && throwIfNone)
 	    		throw new Exception("No such unlock '"+name+"'!");
 	    	return u;
 	    }
@@ -172,7 +228,30 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	List<SchematicsRecipeData> li = u.unlockedRecipes;
 	    	li.Clear();
 	    	li.AddRange(recs.ToList());
+	    	foreach (SchematicsRecipeData rec in recs) {
+	    		rec.unlock = u;
+	    	}
 	    	log("Unlock '"+name+"' ("+u.displayName+") now unlocks the following recipes: "+li.toDebugString());
+	    }
+	    
+	    public static void moveUnlockChain(Unlock u, Unlock.TechCategory page) {
+	    	moveTechCategory(u, page);
+	    	if (u.dependencies != null) {
+		    	foreach (Unlock u2 in u.dependencies)
+		    		moveUnlockChain(u2, page);
+	    	}
+	    }
+	    
+	    public static void moveTechCategory(Unlock u, Unlock.TechCategory page) {
+	    	TechTreeState.instance.categoryMapping[(int)u.category].Remove(u.uniqueId);
+	    	int pageIdx = (int)page;
+	    	TechTreeState.instance.categoryMapping[pageIdx].Add(u.uniqueId);
+	    	u.category = page;
+	    	
+			TechTreeState.instance.categoryMapping[pageIdx].Sort((a, b) => {
+				int v = TechTreeState.instance.unlockStates[a].tier.CompareTo(TechTreeState.instance.unlockStates[b].tier);
+				return v != 0 ? v : TechTreeState.instance.unlockStates[a].unlockRef.treePosition.CompareTo(TechTreeState.instance.unlockStates[b].unlockRef.treePosition);
+			});
 	    }
 	    
 	    public static TechTreeState.ResearchTier getTierAfter(TechTreeState.ResearchTier tier, int steps = 1) {
@@ -292,6 +371,16 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	ARCHIVE,
 	    	LABORATORY,
 	    	MECH,
+	    	UNKNOWN, //16
+	    }
+	    
+	    public enum TechColumns {
+	    	LEFT = 0,
+	    	MIDLEFT = 20,
+	    	CENTERLEFT = 40,
+	    	CENTERRIGHT = 60,
+	    	MIDRIGHT = 80,
+	    	RIGHT = 100,
 	    }
 	    
 	    static TTUtil() {

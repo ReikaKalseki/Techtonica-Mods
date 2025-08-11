@@ -525,6 +525,17 @@ namespace ReikaKalseki.DIANEXCAL
 			return 0;
 		}
 		
+		public static void replaceIngredient(this SchematicsRecipeData rec, string from, string put, int amt = 1) {
+			ResourceInfo seek = EMU.Resources.GetResourceInfoByName(from);
+			for (int i = 0; i < rec.ingTypes.Length; i++) {
+				if (rec.ingTypes[i].uniqueId == seek.uniqueId) {
+					rec.ingTypes[i] = EMU.Resources.GetResourceInfoByName(put);
+					rec.ingQuantities[i] = amt;
+				}
+			}
+			TTUtil.log("Replaced "+from+" with "+put+" in "+rec.toDebugString());
+		}
+		
 		public static void adjustCoreCost(this Unlock u, double f) {
 			u.coresNeeded = u.coresNeeded.Select(c => new Unlock.RequiredCores{type=c.type, number=c.number.multiplyBy(f)}).ToList();
 			TTUtil.log("Adjusting core cost of "+u.name+" to "+u.coresNeeded.toDebugString());

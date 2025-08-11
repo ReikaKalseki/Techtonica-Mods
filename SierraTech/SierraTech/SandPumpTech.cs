@@ -25,19 +25,12 @@ namespace ReikaKalseki.SierraTech {
 		
 		private static readonly Dictionary<int, SandPumpTech> levels = new Dictionary<int, SandPumpTech>();
 
-		internal SandPumpTech(TechLevel t) : base(Unlock.TechCategory.Terraforming, t.coreType, t.coreCount) {
+		internal SandPumpTech(TechLevel t) : base(Unlock.TechCategory.Terraforming, "Sand Pump Power "+RomanNumeral.getRomanNumeral(t.level), t.description, t.coreType, t.coreCount) {
 			levels[t.level] = this;
-			displayName = "Sand Pump Power "+RomanNumeral.getRomanNumeral(t.level);
-			description = "Increases pumping rate of all Sand Pumps by "+((t.pumpMultiplier-1)*100).ToString("0")+"%. Does not increase sand production rate.";
-			finalFixes = () => {
-				Unlock u = unlock;
-				u.sprite = TTUtil.getUnlock(EMU.Names.Resources.SandPump).sprite;
-				u.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, t.ptTier);
-				u.treePosition = TTUtil.getUnlock(EMU.Names.Resources.MiningCharge).treePosition;
-				u.dependency1 = t.level == 1 ? null : levels[t.level-1].unlock;
-				if (u.dependency1 != null)
-					u.dependencies.Add(u.dependency1);
-			};
+			setSprite(EMU.Names.Unlocks.SandPump);
+			setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, t.ptTier), (int)TTUtil.TechColumns.LEFT);
+			if (t.level > 1)
+				setDependencies(levels[t.level-1]);
 		}
 		
 		internal class TechLevel {
@@ -47,6 +40,12 @@ namespace ReikaKalseki.SierraTech {
 			public readonly ResearchCoreDefinition.CoreType coreType;
 			public readonly int coreCount;
 			public readonly float pumpMultiplier;
+			
+			public string description {
+				get {
+					return "Increases pumping rate of all Sand Pumps by "+((pumpMultiplier-1)*100).ToString("0")+"%. Does not increase sand production rate.";
+				}
+			}
 			
 			internal TechLevel(int l, ResearchCoreDefinition.CoreType c, int cc, float f, int tt) {
 				level = l;

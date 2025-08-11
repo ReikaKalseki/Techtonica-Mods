@@ -26,15 +26,24 @@ namespace ReikaKalseki.Botanerranean {
 
         public static BotanerraneanMod instance;
         
-        private static CustomTech planterCoreTech;
-        private static CustomTech seedYieldCoreTech;
-        private static CustomTech seedYieldTech1;
-        private static CustomTech seedYieldTech2;
-        private static CustomTech seedYieldTech3;
+        private static CoreBoostTech planterCoreTech;
+        private static CoreBoostTech seedYieldCoreTech;
+		internal static CustomTech[] seedYieldBoostTechs;
         private static CustomTech t3PlanterTech;
         private static CustomTech seedPlantmatterTech;
+        private static CustomTech seedCarbonTech;
         private static CustomMachine<PlanterInstance, PlanterDefinition> t3Planter;
         private static ResourceInfo t2Planter;
+        private static CustomRecipe kindlevineSeedBlasting;
+        private static CustomRecipe shiverthornSeedBlasting;
+        private static CustomRecipe kindlevineSeedSmelting;
+        private static CustomRecipe shiverthornSeedSmelting;
+		
+		private static readonly SeedYieldTech.TechLevel[] techLevels = new SeedYieldTech.TechLevel[]{
+			new SeedYieldTech.TechLevel(1, ResearchCoreDefinition.CoreType.Purple, 150, 5, TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 1)),
+			new SeedYieldTech.TechLevel(2, ResearchCoreDefinition.CoreType.Blue, 80, 10, TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 5)),
+			new SeedYieldTech.TechLevel(3, ResearchCoreDefinition.CoreType.Blue, 160, 25, TTUtil.getTierAtStation(TTUtil.ProductionTerminal.XRAY, 4), TTUtil.TechColumns.RIGHT),
+		};
         
         public static SchematicsRecipeData planter2Recipe;
         public static SchematicsRecipeData planter3Recipe;
@@ -70,98 +79,56 @@ namespace ReikaKalseki.Botanerranean {
 				t3Planter.addRecipe().ingredients = new List<RecipeResourceInfo>{new RecipeResourceInfo{name=EMU.Names.Resources.PlanterMKII, quantity = 1}}; //will populate it later
                 
 				t3PlanterTech = t3Planter.createUnlock(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Gold, 100);
-				t3PlanterTech.requiredTier = TechTreeState.ResearchTier.Tier0;
-				t3PlanterTech.treePosition = 0;
 				
 				t3Planter.register();
                 
-				planterCoreTech = new CustomTech(Unlock.TechCategory.Science, ResearchCoreDefinition.CoreType.Blue, 100);
-				planterCoreTech.displayName = "Core Boost (Planter)";
-				planterCoreTech.description = "Increases speed of all Planters by 5% per Core Cluster.";
-				planterCoreTech.requiredTier = TechTreeState.ResearchTier.Tier1;
-				planterCoreTech.treePosition = 0;
-				planterCoreTech.finalFixes = () => {
-		        	TTUtil.log("Adjusting "+planterCoreTech.displayName);
-		        	Unlock tu = planterCoreTech.unlock;
-		        	tu.requiredTier = TTUtil.getUnlock("Core Boost (Smelting)").requiredTier;
-		        	tu.treePosition = TTUtil.getUnlock("Core Boost (Threshing)").treePosition;
-		        	tu.sprite = TTUtil.getUnlock("Planter").sprite;
-				};
+				planterCoreTech = new CoreBoostTech(5, ResearchCoreDefinition.CoreType.Blue, 100);
+				planterCoreTech.setText("Planter", "speed of all Planters");
+				planterCoreTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 6), TTUtil.TechColumns.CENTERRIGHT);
+				planterCoreTech.setSprite(EMU.Names.Unlocks.Planter);
 				planterCoreTech.register();
 				
-				seedYieldTech1 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Purple, 150);
-				seedYieldTech1.displayName = "Seed Yield I";
-				seedYieldTech1.description = "Increases seed yield from threshing by 5%.";
-				seedYieldTech1.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 1);
-				seedYieldTech1.treePosition = 0;
-				seedYieldTech1.finalFixes = () => {
-		        	TTUtil.log("Adjusting "+seedYieldTech1.displayName);
-		        	Unlock tu = seedYieldTech1.unlock;
-		        	tu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.AssemblerMKII).treePosition;
-		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
-				};
-				seedYieldTech1.register();
+				seedYieldBoostTechs = new CustomTech[techLevels.Length];
+				for (int i = 0; i < seedYieldBoostTechs.Length; i++) {
+					seedYieldBoostTechs[i] = new SeedYieldTech(techLevels[i]);
+					seedYieldBoostTechs[i].register();
+				}
 				
-				seedYieldTech2 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Blue, 80);
-				seedYieldTech2.displayName = "Seed Yield II";
-				seedYieldTech2.description = "Increases seed yield from threshing by 10%.";
-				seedYieldTech2.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 5);
-				seedYieldTech2.treePosition = 0;
-				seedYieldTech2.finalFixes = () => {
-		        	TTUtil.log("Adjusting "+seedYieldTech2.displayName);
-		        	Unlock tu = seedYieldTech2.unlock;
-		        	tu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.ThresherMKII).treePosition;
-		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
-		        	tu.dependency1 = seedYieldTech1.unlock;
-		        	tu.dependencies = new List<Unlock>{tu.dependency1};
-				};
-				seedYieldTech2.register();
-				
-				seedYieldTech3 = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Blue, 160);
-				seedYieldTech3.displayName = "Seed Yield III";
-				seedYieldTech3.description = "Increases seed yield from threshing by 25%.";
-				seedYieldTech3.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.XRAY, 4);
-				seedYieldTech3.treePosition = 0;
-				seedYieldTech3.finalFixes = () => {
-		        	TTUtil.log("Adjusting "+seedYieldTech3.displayName);
-		        	Unlock tu = seedYieldTech3.unlock;
-		        	tu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.CarbonPowder).treePosition;
-		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
-		        	tu.dependency1 = seedYieldTech2.unlock;
-		        	tu.dependencies = new List<Unlock>{tu.dependency1};
-				};
-				seedYieldTech3.register();
-				
-				seedYieldCoreTech = new CustomTech(Unlock.TechCategory.Science, ResearchCoreDefinition.CoreType.Green, 100);
-				seedYieldCoreTech.displayName = "Core Boost (Seed Threshing)";
-				seedYieldCoreTech.description = "Increases seed yield from threshing by 5% per Core Cluster.";
-				seedYieldCoreTech.requiredTier = TechTreeState.ResearchTier.Tier8;
-				seedYieldCoreTech.treePosition = 0;
-				seedYieldCoreTech.finalFixes = () => {
-		        	TTUtil.log("Adjusting "+seedYieldCoreTech.displayName);
-		        	Unlock tu = seedYieldCoreTech.unlock;
-		        	tu.requiredTier = TTUtil.getUnlock("Core Boost (Smelting)").requiredTier;
-		        	tu.treePosition = TTUtil.getUnlock("Core Boost (Threshing)").treePosition-20;
-		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.KindlevineSeed).sprite;
-				};
+				seedYieldCoreTech = new CoreBoostTech(5, ResearchCoreDefinition.CoreType.Green, 100, EMU.Names.Unlocks.CoreBoostThreshing);
+				seedYieldCoreTech.setText("Threshing Seed Yield", "seed yield from threshing");
+				seedYieldCoreTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 6), TTUtil.TechColumns.RIGHT);
+				seedYieldCoreTech.setSprite(EMU.Names.Resources.KindlevineSeed);
 				seedYieldCoreTech.register();
 				
-				seedPlantmatterTech = new CustomTech(Unlock.TechCategory.Synthesis, ResearchCoreDefinition.CoreType.Purple, 50);
-				seedPlantmatterTech.displayName = "Seed Decomposition";
-				seedPlantmatterTech.description = "Enables recycling seeds into plantmatter.";
-				seedPlantmatterTech.requiredTier = TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 4);
-				seedPlantmatterTech.treePosition = 0;
-				seedPlantmatterTech.finalFixes = () => {
-		        	TTUtil.log("Adjusting "+seedPlantmatterTech.displayName);
-		        	Unlock tu = seedPlantmatterTech.unlock;
-		        	tu.treePosition = TTUtil.getUnlock(EMU.Names.Resources.SmelterMKII).treePosition;
-		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.Plantmatter).sprite;
-				};
+				kindlevineSeedSmelting = makeSeedToPlantmatterAndCarbon(EMU.Names.Resources.KindlevineSeed, 1.5F);
+				shiverthornSeedSmelting = makeSeedToPlantmatterAndCarbon(EMU.Names.Resources.ShiverthornSeed, 0.5F);
+				//sesamiteSeedSmelting = makeSeedToPlantmatterAndCarbon(EMU.Names.Resources.SesamiteSeed, 5); //costs 2 of each seed normally to make 4 sesamite, but recompute to be sure
+				kindlevineSeedBlasting = new SeedBlastingRecipe(kindlevineSeedSmelting);
+				shiverthornSeedBlasting = new SeedBlastingRecipe(shiverthornSeedSmelting);
+				//sesamiteSeedBlasting = new SeedBlastingRecipe(sesamiteSeedSmelting);
+				kindlevineSeedBlasting.register();
+				shiverthornSeedBlasting.register();
+				//sesamiteSeedBlasting.register();
+				
+				seedPlantmatterTech = new CustomTech(Unlock.TechCategory.Synthesis, "Seed Recycling I", "Reusing surplus seeds.", ResearchCoreDefinition.CoreType.Purple, 50);
+				seedPlantmatterTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 4), TTUtil.TechColumns.CENTERLEFT);
+				seedPlantmatterTech.setSprite(EMU.Names.Resources.Plantmatter);
 				seedPlantmatterTech.register();
-			
-				makeSeedToFuel(EMU.Names.Resources.KindlevineSeed, 1.5F);
-				makeSeedToFuel(EMU.Names.Resources.ShiverthornSeed, 0.5F);
-				makeSeedToFuel(EMU.Names.Resources.SesamiteSeed);
+				
+				seedCarbonTech = new CustomTech(Unlock.TechCategory.Synthesis, "Seed Recycling II", "A more lucrative use for surplus seeds.", ResearchCoreDefinition.CoreType.Blue, 20);
+				seedCarbonTech.finalFixes = () => {
+		        	TTUtil.log("Adjusting "+seedCarbonTech.displayName);
+		        	Unlock carb = TTUtil.getUnlock(EMU.Names.Unlocks.CarbonPowder);
+		        	Unlock tu = seedCarbonTech.unlock;
+		        	tu.treePosition = carb.treePosition;
+		        	tu.requiredTier = TTUtil.getTierAfter(carb.requiredTier);
+		        	tu.dependency1 = carb;
+		        	tu.dependency2 = seedPlantmatterTech.unlock;
+		        	tu.dependencies = new List<Unlock>{tu.dependency1, tu.dependency2};
+		        	tu.sprite = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.ShiverthornSeed).sprite;
+				};
+        		seedCarbonTech.setRecipes(kindlevineSeedSmelting, shiverthornSeedSmelting, kindlevineSeedBlasting, shiverthornSeedBlasting);
+				seedCarbonTech.register();			
 
 				DIMod.onDefinesLoadedFirstTime += onDefinesLoaded;
 				DIMod.onTechsLoadedFirstTime += onTechsLoaded;
@@ -200,7 +167,7 @@ namespace ReikaKalseki.Botanerranean {
 			
 			t2Planter = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.PlanterMKII);
 			t3Planter.item.description = t2Planter.description.Replace("rapid", "extremely fast");
-			t3.description = t3Planter.item.displayName;
+			t3.description = t3Planter.name;
 		}
         
         private static void onRecipesLoaded() {
@@ -225,7 +192,7 @@ namespace ReikaKalseki.Botanerranean {
         	TTUtil.setUnlockRecipes(EMU.Names.Resources.PlanterMKII, planter2Recipe);
         	TTUtil.setUnlockRecipes(t3Planter.name, planter3Recipe);
         	
-        	TTUtil.setUnlockRecipes(seedPlantmatterTech.name, TTUtil.getRecipes(isSeedRecycling).ToArray());
+        	seedPlantmatterTech.setRecipes(TTUtil.getRecipes(isSeedRecycling).ToArray());
         }
         
         private static bool isSeedRecycling(SchematicsRecipeData rec) {
@@ -238,19 +205,10 @@ namespace ReikaKalseki.Botanerranean {
         	return rec.ingTypes.Length == 1 && TTUtil.isSeed(rec.ingTypes[0]) && rec.outputTypes.Length == 1 && rec.outputTypes[0].uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.Plantmatter);
         }
         
-        private static void makeSeedToFuel(string name, float relativeValue = 1) {
-        	//ResourceInfo plantmatter = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.Plantmatter);
-        	//ResourceInfo res = EMU.Resources.GetResourceInfoByName(name);
-        	//res.fuelAmount = template.fuelAmount*1.5F*relativeValue;
-        	//TTUtil.log(name+" now has fuel value "+res.fuelAmount.ToString("0.0"));
-        	
-			NewRecipeDetails recipe = new NewRecipeDetails();
-			recipe.GUID = name+"_To_Plantmatter";
-			recipe.craftingMethod = CraftingMethod.Assembler;
-			recipe.craftTierRequired = 0;
+        private static CustomRecipe makeSeedToPlantmatterAndCarbon(string name, float relativeValue = 1) {        	
+			CustomRecipe recipe = new CustomRecipe(name+"_To_Plantmatter");
 			recipe.duration = 2F;
-			recipe.sortPriority = 10;
-			recipe.unlockName = seedPlantmatterTech.name;
+			recipe.unlockName = ""; //will be replaced
 			recipe.ingredients = new List<RecipeResourceInfo>() {
 				new RecipeResourceInfo() {
 					name = name,
@@ -262,9 +220,26 @@ namespace ReikaKalseki.Botanerranean {
 					name = EMU.Names.Resources.Plantmatter,
 					quantity = 6.multiplyBy(relativeValue),
 				}
+			};			
+			recipe.register();
+			    	
+			CustomRecipe smelt = new CustomRecipe(name+"_To_Carbon", CraftingMethod.Smelter);
+			smelt.duration = 15F;
+			smelt.unlockName = ""; //will be replaced
+			smelt.ingredients = new List<RecipeResourceInfo>() {
+				new RecipeResourceInfo() {
+					name = name,
+					quantity = 10, //2.5/min
+				}
 			};
-			
-			EMUAdditions.AddNewRecipe(recipe, true);
+			smelt.outputs = new List<RecipeResourceInfo>() {
+				new RecipeResourceInfo() {
+					name = EMU.Names.Resources.CarbonPowder,
+					quantity = (10*relativeValue).FloorToInt(),
+				}
+			};			
+			smelt.register();
+			return smelt;
         }
         
         public static bool tickPlantSlot(ref PlanterInstance.PlantSlot slot, float increment, ref PlanterInstance owner) { //no need to handle T2, as it is already doubled
@@ -315,19 +290,27 @@ namespace ReikaKalseki.Botanerranean {
         }
         
         public static float globalThresherSeedFactor = 1;
+		
+		internal static SeedYieldTech.TechLevel getHighestSeedTechLevelUnlocked() {
+			for (int i = seedYieldBoostTechs.Length-1; i >= 0; i--) {
+				if (seedYieldBoostTechs[i].isUnlocked)
+					return techLevels[i];
+			}
+			return null;
+		}
         
         public static int getThresherItemYield(int amt, int index, ref ThresherInstance machine) {
         	SchematicsRecipeData recipe = machine.curSchematic;
         	if (amt == 1 && TTUtil.isSeed(recipe.outputTypes[index])) {
         		float chance = machine._myDef.name.EndsWith("_2", StringComparison.InvariantCultureIgnoreCase) ? 0.025F : 0.01F; //base 1% or 2.5% for thresher II
-        		if (TechTreeState.instance.freeCores > 0 && seedYieldCoreTech.isUnlocked)
-        			chance += TTUtil.getCoreClusterCount()*0.05F; //5% per core cluster
-        		if (seedYieldTech3.isUnlocked)
-        			chance += 0.25F;
-        		else if (seedYieldTech2.isUnlocked)
-        			chance += 0.1F;
-        		else if (seedYieldTech1.isUnlocked)
-        			chance += 0.05F;
+        		
+        		chance += seedYieldCoreTech.currentEffect;
+        		
+				SeedYieldTech.TechLevel lvl = getHighestSeedTechLevelUnlocked();
+				//TTUtil.log("Seed yield available tech level is "+lvl);
+				if (lvl != null)
+					chance += lvl.yieldBoost;
+			
         		chance *= globalThresherSeedFactor;
         		//TTUtil.log("Thresher "+machine._myDef.name+" has a "+(chance*100).ToString("0.0")+"% chance of making an extra seed (from "+amt+")");
         		if (UnityEngine.Random.Range(0F, 1F) < chance) {
@@ -377,14 +360,14 @@ namespace ReikaKalseki.Botanerranean {
         		TTUtil.log("Checking "+res.toDebugString());
         		bool flag = false;
         		if (res != null && res.uniqueId == t2Planter.uniqueId) {
-        			ResourceInfo res2 = t3Planter.item;
+        			CustomItem res2 = t3Planter.item;
         			if (res2 == null) {
         				throw new Exception("No such item to add to production terminal to replace '"+res.toDebugString()+"'!");
         			}
-        			if (res2.rawSprite == null) {
-        				throw new Exception("Item "+res2.toDebugString()+" not valid for production terminal, has no sprite!");
+        			if (res2.item.rawSprite == null) {
+        				throw new Exception("Item "+res2.item.toDebugString()+" not valid for production terminal, has no sprite!");
         			}
-        			cfg.reqTypes[i] = res2;
+        			cfg.reqTypes[i] = res2.item;
         			TTUtil.log("Replaced planter 2 with 3 in PT "+cfg.name);
         			//appliedPlanterTerminalReplace = true;
         			flag = true;

@@ -79,6 +79,10 @@ namespace ReikaKalseki.DIANEXCAL {
 				RenderUtil.dumpTexture(TTUtil.diDLL, id, ri.sprite.texture);
 			}*/
 			if (!definesLoadedFired) {
+				ResourceInfo res = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.SpectralCubeColorlessX100);
+				res.rawName = "Spectral Cube (Prismatic)";
+				res.rawSprite = TextureManager.createSprite(TextureManager.getTexture(TTUtil.diDLL, "Textures/WhiteCubeT2"));
+				
 				if (onDefinesLoadedFirstTime != null) {
 					try {
 						onDefinesLoadedFirstTime.Invoke();
@@ -138,7 +142,7 @@ namespace ReikaKalseki.DIANEXCAL {
 		}
         
 		public static void initializeAccumulatorSettings(AccumulatorDefinition def) {
-			def.runtimeSettings.energyCapacity *= 5 / 2; //2.5x
+			//def.runtimeSettings.energyCapacity *= 5 / 2; //2.5x
 		}
         
 		public static bool protectionZonesActive = true;

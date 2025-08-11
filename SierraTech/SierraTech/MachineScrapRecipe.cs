@@ -21,10 +21,9 @@ using PropStreaming;
 
 namespace ReikaKalseki.SierraTech {
 
-	public class MachineScrapRecipe {
+	public class MachineScrapRecipe : CustomRecipe {
 		
 		private static readonly Dictionary<string, MachineScrapRecipe> recipeItems = new Dictionary<string, MachineScrapRecipe>();
-		private static readonly List<SchematicsRecipeData> recipes = new List<SchematicsRecipeData>();		
 		
 		private static int scrapID;
 		private static int goldOreID;
@@ -38,8 +37,6 @@ namespace ReikaKalseki.SierraTech {
 		private static float weightedScrapPerRelay;
 		
 		public readonly string sourceItem;
-		
-		public SchematicsRecipeData recipe { get; private set; }
 		
 		static MachineScrapRecipe() {
 			DIMod.onDefinesLoadedFirstTime += () => {
@@ -89,7 +86,7 @@ namespace ReikaKalseki.SierraTech {
 				TTUtil.log("Computed scrap per relay ratio of ["+scrapPerRelayLeastEfficient.ToString("0.00")+", "+scrapPerRelayMostEfficient.ToString("0.00")+"]="+weightedScrapPerRelay.ToString("0.00"));
 			};
 			EMU.Events.TechTreeStateLoaded += () => {
-        		TTUtil.setUnlockRecipes(SierraTechMod.machineScrappingTech.name, recipes.ToArray());
+				SierraTechMod.machineScrappingTech.setRecipes(recipeItems.Values.Select(rec => rec.recipe).ToArray());
 			};
 		}
 		
@@ -102,19 +99,11 @@ namespace ReikaKalseki.SierraTech {
 		 	return rec.ingTypes.Length == 3 && rec.getCost(goldID) > 0 && rec.getCost(EMU.Names.Resources.ProcessorArray) > 0 && rec.getCost(EMU.Names.Resources.AtlantumSlab) > 0;
 		}
 
-		internal MachineScrapRecipe(string item) {
+		internal MachineScrapRecipe(string item) : base(item+"_to_scrap", CraftingMethod.Crusher) {
 			sourceItem = item;
 			recipeItems[item] = this;
-		}
-		
-		public void register() {
-			NewRecipeDetails rec = new NewRecipeDetails();
-			rec.GUID = sourceItem+"_to_scrap";
-			rec.craftingMethod = CraftingMethod.Crusher;
-			rec.craftTierRequired = 0;
-			rec.sortPriority = 10;
-			rec.unlockName = EMU.Names.Unlocks.ScrapProcessingBasic; //gets overwritten
-			rec.ingredients = new List<RecipeResourceInfo>() {
+			
+			ingredients = new List<RecipeResourceInfo>() {
 				new RecipeResourceInfo() {
 					name = sourceItem,
 					quantity = 1
@@ -124,15 +113,14 @@ namespace ReikaKalseki.SierraTech {
 					quantity = 1
 				}
 			};
-			rec.outputs = new List<RecipeResourceInfo>() {
+			outputs = new List<RecipeResourceInfo>() {
 				new RecipeResourceInfo() {
 					name = EMU.Names.Resources.ScrapOre,
 					quantity = 1 //will be replaced
 				}
 			};
-			EMUAdditions.AddNewRecipe(rec);
-			DIMod.onRecipesLoaded += () => {
-				recipe = GameDefines.instance.GetValidCrusherRecipes(new List<int>{EMU.Resources.GetResourceIDByName(sourceItem)}, 9999, 9999, false)[0];
+			
+			finalFixes = () => {
 				int surplus;
 				float f = sourceItem == EMU.Names.Resources.ResearchCore520nmGreen ? 2.5F : 1; //more involved = more reward
 				recipe.outputQuantities[0] = computeYield(sourceItem, out surplus, f);

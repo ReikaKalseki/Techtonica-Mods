@@ -20,55 +20,45 @@ namespace ReikaKalseki.DIANEXCAL {
 	
 	public class CustomMachine<T, V> : Unlockable where T : struct, IMachineInstance<T, V> where V : MachineDefinition<T, V> {
 		
-		private readonly NewResourceDetails resource;
 		private readonly V definition;
 		
 		private CustomTech tech;
 		
-		private NewRecipeDetails recipe;
+		private CustomRecipe recipe;
         
-		public string name { get { return resource.name; } }
+		public string name { get { return item.name; } }
         
-		public ResourceInfo item { get; private set; }
+		public CustomItem item { get; private set; }
+		
+		public Assembly ownerMod { get; private set; }
 		
 		public bool isUnlocked { get { return tech.isUnlocked; } }
 		
 		public Unlock unlock { get { return TTUtil.getUnlock(name); } }
 		
-		public SchematicsRecipeData registeredRecipe { get; private set; }
-		
 		public CustomMachine(string name, string desc, string sprite, string unlock, string template) {
-			resource = new NewResourceDetails();
-			resource.name = name;
-			resource.description = desc;
-			resource.craftingMethod = CraftingMethod.Assembler;
-			resource.craftTierRequired = 0;
-			resource.headerTitle = "Logistics"; //TODO
-			resource.subHeaderTitle = "Utility";
-			resource.maxStackCount = 50;
-			resource.sortPriority = 998;
-			resource.unlockName = unlock;
-			resource.parentName = template;
-			resource.sprite = TextureManager.createSprite(TextureManager.getTexture(TTUtil.tryGetModDLL(true), "Textures/"+sprite));
+			item = new CustomItem(name, desc, template, sprite);
+			item.craftTierRequired = 0;
+			item.headerTitle = "Logistics"; //TODO
+			item.subHeaderTitle = "Utility";
+			item.maxStackCount = 50;
+			item.sortPriority = 998;
+			item.unlockName = unlock;
 			
 			definition = ScriptableObject.CreateInstance<V>();
+			
+			ownerMod = TTUtil.tryGetModDLL();
 		}
 		
 		public CustomTech createUnlock(Unlock.TechCategory cat, ResearchCoreDefinition.CoreType type, int cores) {
-			tech = new CustomTech(cat, type, cores);
-			tech.displayName = name;
-			tech.description = resource.description;
-			tech.sprite = resource.sprite;
+			tech = new CustomTech(cat, name, item.description, type, cores);
+			tech.sprite = item.sprite;
 			return tech;
 		}
 		
-		public NewRecipeDetails addRecipe(int amt = 1) {
-			recipe = new NewRecipeDetails();
-			recipe.GUID = name;
-			recipe.craftingMethod = CraftingMethod.Assembler;
-			recipe.craftTierRequired = 0;
+		public CustomRecipe addRecipe(int amt = 1) {
+			recipe = new CustomRecipe(name);
 			recipe.duration = 1F;
-			recipe.sortPriority = 10;
 			recipe.unlockName = EMU.Names.Unlocks.BasicLogistics;
 			recipe.outputs = new List<RecipeResourceInfo>() {
 				new RecipeResourceInfo() {
@@ -81,39 +71,36 @@ namespace ReikaKalseki.DIANEXCAL {
 		
 		public void register() {
 			try {
-				EMUAdditions.AddNewMachine(definition, resource, true);
+				EMUAdditions.AddNewMachine(definition, item, true);
 				
 				if (recipe != null)
-					EMUAdditions.AddNewRecipe(recipe, true);
+					recipe.register();
 				else
-					TTUtil.log("Machine '"+this+"' has no recipe!");
+					throw new Exception("Machine '"+this+"' has no recipe!");
 				
-				if (tech != null)
+				if (tech != null) {
+					tech.setRecipes(recipe);
 					tech.register();
+				}
 				else
-					TTUtil.log("Machine '"+this+"' has no tech!");
+					throw new Exception("Machine '"+this+"' has no tech!");
 				
-				EMU.Events.GameDefinesLoaded += () => {
-					item = EMU.Resources.GetResourceInfoByName(name, true);
-					item.rawSprite = item.sprite;
-					item.unlock = unlock;
+				EMU.Events.GameDefinesLoaded += () => {					
+					item.onPatched(); //it will not be called since register() is not called since the item is passed in to AddNewMachine which does its own addItem
+					item.item.rawSprite = item.sprite;
+					item.item.unlock = unlock;
 				};
 				
-				EMU.Events.TechTreeStateLoaded += () => {
-					registeredRecipe = TTUtil.getRecipesByOutput(name)[0];
-					if (registeredRecipe != null)
-						unlock.unlockedRecipes.Add(registeredRecipe);
-				};
-				
-				TTUtil.log("Registered machine " + this);
+				TTUtil.log("Registered machine " + this, ownerMod);
 			}
 			catch (Exception ex) {
-				TTUtil.log("Failed to register "+this+": "+ex.ToString());
+				TTUtil.log("Failed to register "+this, ownerMod);
+				throw ex;
 			}
 		}
 		
 		public override sealed string ToString() {
-			return resource.name;
+			return string.Format("CustomMachine<{0}, {1}> {2}", typeof(T).Name, typeof(V).Name, item.name);
 		}
 		
 		public bool isThisMachine(IMachineInstance<T, V> inst) {
