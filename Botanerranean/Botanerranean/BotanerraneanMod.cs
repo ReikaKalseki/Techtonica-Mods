@@ -39,16 +39,14 @@ namespace ReikaKalseki.Botanerranean {
         private static CustomRecipe kindlevineSeedSmelting;
         private static CustomRecipe shiverthornSeedSmelting;
 		
-		private static readonly SeedYieldTech.TechLevel[] techLevels = new SeedYieldTech.TechLevel[]{
-			new SeedYieldTech.TechLevel(1, ResearchCoreDefinition.CoreType.Purple, 150, 5, TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 1)),
-			new SeedYieldTech.TechLevel(2, ResearchCoreDefinition.CoreType.Blue, 80, 10, TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 5)),
-			new SeedYieldTech.TechLevel(3, ResearchCoreDefinition.CoreType.Blue, 160, 25, TTUtil.getTierAtStation(TTUtil.ProductionTerminal.XRAY, 4), TTUtil.TechColumns.RIGHT),
-		};
+        private static SeedYieldTech.TechLevel[] techLevels;
         
         public static SchematicsRecipeData planter2Recipe;
         public static SchematicsRecipeData planter3Recipe;
         
         public static readonly Assembly modDLL = Assembly.GetExecutingAssembly();
+    
+    	public static readonly Config<BTConfig.ConfigEntries> config = new Config<BTConfig.ConfigEntries>(modDLL);
         
         private static readonly Dictionary<string, NewRecipeDetails> seedRecipes = new Dictionary<string, NewRecipeDetails>();
 
@@ -60,6 +58,14 @@ namespace ReikaKalseki.Botanerranean {
         public void Awake() {
             TTUtil.log("Begin Initializing Botanerranean");
             try {
+            	config.load();
+            	
+				techLevels = new SeedYieldTech.TechLevel[] {
+            		new SeedYieldTech.TechLevel(1, ResearchCoreDefinition.CoreType.Purple, 150, config.getInt(BTConfig.ConfigEntries.SEED1EFFECT), TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 1)),
+					new SeedYieldTech.TechLevel(2, ResearchCoreDefinition.CoreType.Blue, 80, config.getInt(BTConfig.ConfigEntries.SEED2EFFECT), TTUtil.getTierAtStation(TTUtil.ProductionTerminal.VICTOR, 5)),
+					new SeedYieldTech.TechLevel(3, ResearchCoreDefinition.CoreType.Blue, 160, config.getInt(BTConfig.ConfigEntries.SEED3EFFECT), TTUtil.getTierAtStation(TTUtil.ProductionTerminal.XRAY, 1), TTUtil.TechColumns.RIGHT),
+				};
+            	
                 Harmony harmony = new Harmony("Botanerranean");
                 Harmony.DEBUG = true;
                 FileLog.logPath = Path.Combine(Path.GetDirectoryName(modDLL.Location), "harmony-log_"+Path.GetFileName(Assembly.GetExecutingAssembly().Location)+".txt");
@@ -82,7 +88,7 @@ namespace ReikaKalseki.Botanerranean {
 				
 				t3Planter.register();
                 
-				planterCoreTech = new CoreBoostTech(5, ResearchCoreDefinition.CoreType.Blue, 100);
+				planterCoreTech = new CoreBoostTech(config.getInt(BTConfig.ConfigEntries.PLANTERCOREEFFECT), ResearchCoreDefinition.CoreType.Blue, 100);
 				planterCoreTech.setText("Planter", "speed of all Planters");
 				planterCoreTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 6), TTUtil.TechColumns.CENTERRIGHT);
 				planterCoreTech.setSprite(EMU.Names.Unlocks.Planter);
@@ -94,7 +100,7 @@ namespace ReikaKalseki.Botanerranean {
 					seedYieldBoostTechs[i].register();
 				}
 				
-				seedYieldCoreTech = new CoreBoostTech(5, ResearchCoreDefinition.CoreType.Green, 100, EMU.Names.Unlocks.CoreBoostThreshing);
+				seedYieldCoreTech = new CoreBoostTech(config.getInt(BTConfig.ConfigEntries.SEEDCOREEFFECT), ResearchCoreDefinition.CoreType.Green, 100, EMU.Names.Unlocks.CoreBoostThreshing);
 				seedYieldCoreTech.setText("Threshing Seed Yield", "seed yield from threshing");
 				seedYieldCoreTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 6), TTUtil.TechColumns.RIGHT);
 				seedYieldCoreTech.setSprite(EMU.Names.Resources.KindlevineSeed);
@@ -218,7 +224,7 @@ namespace ReikaKalseki.Botanerranean {
 			recipe.outputs = new List<RecipeResourceInfo>() {
 				new RecipeResourceInfo() {
 					name = EMU.Names.Resources.Plantmatter,
-					quantity = 6.multiplyBy(relativeValue),
+					quantity = 6.multiplyBy(relativeValue*config.getFloat(BTConfig.ConfigEntries.SEEDPLANTMATTERRATIO1)),
 				}
 			};			
 			recipe.register();
@@ -235,7 +241,7 @@ namespace ReikaKalseki.Botanerranean {
 			smelt.outputs = new List<RecipeResourceInfo>() {
 				new RecipeResourceInfo() {
 					name = EMU.Names.Resources.CarbonPowder,
-					quantity = (10*relativeValue).FloorToInt(),
+					quantity = (10*relativeValue*config.getFloat(BTConfig.ConfigEntries.SEEDPLANTMATTERRATIO2)).FloorToInt(),
 				}
 			};			
 			smelt.register();
@@ -252,9 +258,7 @@ namespace ReikaKalseki.Botanerranean {
         
         private static float getPlanterSpeed(ref PlanterInstance pi) {
         	float val = globalPlanterSpeedFactor;
-        	if (planterCoreTech.isUnlocked && TechTreeState.instance.freeCores > 0) {
-        		val *= 1+TTUtil.getCoreClusterCount()*0.05F;
-			}
+        	val *= 1+planterCoreTech.currentEffect;
 			if (t3Planter != null && t3Planter.isThisMachine(pi)) {
 				val *= 4;
 			}
@@ -284,12 +288,12 @@ namespace ReikaKalseki.Botanerranean {
         		TTUtil.log("Set "+def.toDebugString()+" power cost to "+def.runtimePowerSettings.GetPowerConsumption());
         	}
         	else if (def.displayName.EndsWith("MKII", StringComparison.InvariantCultureIgnoreCase)) {
-        		def.runtimePowerSettings.kWPowerConsumption = def.runtimePowerSettings.kWPowerConsumption.multiplyBy(0.375); //from 4000 to 1500
+        		def.runtimePowerSettings.kWPowerConsumption = def.runtimePowerSettings.kWPowerConsumption.multiplyBy(0.625); //from 4000 to 2500
         		TTUtil.log("Set "+def.toDebugString()+" power cost to "+def.runtimePowerSettings.GetPowerConsumption());
         	}
         }
         
-        public static float globalThresherSeedFactor = 1;
+        //public static float globalThresherSeedFactor = 1;
 		
 		internal static SeedYieldTech.TechLevel getHighestSeedTechLevelUnlocked() {
 			for (int i = seedYieldBoostTechs.Length-1; i >= 0; i--) {
@@ -302,7 +306,8 @@ namespace ReikaKalseki.Botanerranean {
         public static int getThresherItemYield(int amt, int index, ref ThresherInstance machine) {
         	SchematicsRecipeData recipe = machine.curSchematic;
         	if (amt == 1 && TTUtil.isSeed(recipe.outputTypes[index])) {
-        		float chance = machine._myDef.name.EndsWith("_2", StringComparison.InvariantCultureIgnoreCase) ? 0.025F : 0.01F; //base 1% or 2.5% for thresher II
+        		BTConfig.ConfigEntries entry = machine._myDef.name.EndsWith("_2", StringComparison.InvariantCultureIgnoreCase) ? BTConfig.ConfigEntries.THRESHER2BONUSBASE : BTConfig.ConfigEntries.THRESHER1BONUSBASE;
+        		float chance = config.getFloat(entry);
         		
         		chance += seedYieldCoreTech.currentEffect;
         		
@@ -311,7 +316,7 @@ namespace ReikaKalseki.Botanerranean {
 				if (lvl != null)
 					chance += lvl.yieldBoost;
 			
-        		chance *= globalThresherSeedFactor;
+        		//chance *= globalThresherSeedFactor;
         		//TTUtil.log("Thresher "+machine._myDef.name+" has a "+(chance*100).ToString("0.0")+"% chance of making an extra seed (from "+amt+")");
         		if (UnityEngine.Random.Range(0F, 1F) < chance) {
         			amt += 1;

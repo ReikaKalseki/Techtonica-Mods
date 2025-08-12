@@ -50,6 +50,8 @@ namespace ReikaKalseki.SierraTech {
 		internal static readonly TTUtil.TechColumns COREBOOST_COLUMN = TTUtil.TechColumns.CENTERLEFT;
         
 		public static readonly Assembly modDLL = Assembly.GetExecutingAssembly();
+    
+    	public static readonly Config<STConfig.ConfigEntries> config = new Config<STConfig.ConfigEntries>(modDLL);
 		
 		private static readonly SandPumpTech.TechLevel[] techLevels = new SandPumpTech.TechLevel[]{
 			new SandPumpTech.TechLevel(1, ResearchCoreDefinition.CoreType.Blue, 100, 1.5F, 0),
@@ -68,6 +70,8 @@ namespace ReikaKalseki.SierraTech {
 		public void Awake() {
 			TTUtil.log("Begin Initializing SierraTech");
 			try {
+				config.load();
+				
 				Harmony harmony = new Harmony("SierraTech");
 				Harmony.DEBUG = true;
 				FileLog.logPath = Path.Combine(Path.GetDirectoryName(modDLL.Location), "harmony-log_" + Path.GetFileName(Assembly.GetExecutingAssembly().Location) + ".txt");
@@ -88,7 +92,7 @@ namespace ReikaKalseki.SierraTech {
 					sandPumpBoostTechs[i] = new SandPumpTech(techLevels[i]);
 					sandPumpBoostTechs[i].register();
 				}
-				sandPumpCoreTech = new CoreBoostTech(10, ResearchCoreDefinition.CoreType.Gold, 250);
+				sandPumpCoreTech = new CoreBoostTech(config.getInt(STConfig.ConfigEntries.PUMPCOREEFFECT), ResearchCoreDefinition.CoreType.Gold, 250);
 				sandPumpCoreTech.setText("Sand Pump", "speed of all Sand Pumps");
 				sandPumpCoreTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 5), COREBOOST_COLUMN);
 				sandPumpCoreTech.setDependencies(EMU.Names.Unlocks.CoreBoosting);
@@ -115,7 +119,7 @@ namespace ReikaKalseki.SierraTech {
 				carbonBrickRecipe.ingredients = new List<RecipeResourceInfo>() {
 					new RecipeResourceInfo() {
 						name = EMU.Names.Resources.SesamiteStems,
-						quantity = 8
+						quantity = config.getInt(STConfig.ConfigEntries.SESAMITEBLASTCOST)
 					}
 				};
 				carbonBrickRecipe.outputs = new List<RecipeResourceInfo>() {
@@ -148,7 +152,7 @@ namespace ReikaKalseki.SierraTech {
 				goldCrushingTech.register();
 				
 				goldCrushingRecipe = new CustomRecipe("goldcrushing", CraftingMethod.Crusher);
-				goldCrushingRecipe.duration = 30;
+				goldCrushingRecipe.duration = 30/config.getFloat(STConfig.ConfigEntries.GOLDDUSTSPEED);
 				goldCrushingRecipe.unlockName = EMU.Names.Unlocks.GoldOreExtraction; //gets overwritten
 				goldCrushingRecipe.ingredients = new List<RecipeResourceInfo>() {
 					new RecipeResourceInfo() {
@@ -169,7 +173,7 @@ namespace ReikaKalseki.SierraTech {
 				goldCrushingRecipe.register();
 				
 				goldPowderSmeltingRecipe = new CustomRecipe("goldpowdersmelting", CraftingMethod.Smelter);
-				goldPowderSmeltingRecipe.duration = 6*4; //conversion factor of 4 since MkIII is the comparison point
+				goldPowderSmeltingRecipe.duration = 6*4/config.getFloat(STConfig.ConfigEntries.GOLDDUSTSPEED); //conversion factor of 4 since MkIII is the comparison point
 				goldPowderSmeltingRecipe.unlockName = EMU.Names.Unlocks.GoldOreExtraction; //gets overwritten
 				goldPowderSmeltingRecipe.ingredients = new List<RecipeResourceInfo>() {
 					new RecipeResourceInfo() {
@@ -185,19 +189,22 @@ namespace ReikaKalseki.SierraTech {
 				};
 				goldPowderSmeltingRecipe.register();
 				
-				greenCoreEfficiencyTech = new CustomTech(Unlock.TechCategory.Science, "Green Core Power Boost", "Boosts the power of green cores to 125%, matching blue and purple.", ResearchCoreDefinition.CoreType.Gold, 40); //takes three green to make each, so equivalent green cost of 120, breakeven at spent 480
-				greenCoreEfficiencyTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 6), YELLOW_CORE_COLUMN);
-				greenCoreEfficiencyTech.setSprite(EMU.Names.Unlocks.ResearchCoreGreen);
-				greenCoreEfficiencyTech.setDependencies(EMU.Names.Unlocks.ResearchCoreYellow);
-				greenCoreEfficiencyTech.register();
+				float corePowerScale = config.getFloat(STConfig.ConfigEntries.COREPOWERBOOSTCOST);
+				if (corePowerScale > 0) {
+					greenCoreEfficiencyTech = new CustomTech(Unlock.TechCategory.Science, "Green Core Power Boost", "Boosts the power of green cores to 125%, matching blue and purple.", ResearchCoreDefinition.CoreType.Gold, 40.multiplyBy(corePowerScale)); //takes three green to make each, so equivalent green cost of 120, breakeven at spent 480
+					greenCoreEfficiencyTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 6), YELLOW_CORE_COLUMN);
+					greenCoreEfficiencyTech.setSprite(EMU.Names.Unlocks.ResearchCoreGreen);
+					greenCoreEfficiencyTech.setDependencies(EMU.Names.Unlocks.ResearchCoreYellow);
+					greenCoreEfficiencyTech.register();
+					
+					allCoreEfficiencyTech2 = new CustomTech(Unlock.TechCategory.Science, "Research Core Power Boost II", "Boosts the power of all research cores to 150%.", ResearchCoreDefinition.CoreType.Gold, 500.multiplyBy(corePowerScale)); //== 500 gold/1500 green/4500 blue/13500 purple, breakeven at spent 1000 gold
+					allCoreEfficiencyTech2.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 7), YELLOW_CORE_COLUMN);
+					allCoreEfficiencyTech2.setSprite(EMU.Names.Unlocks.ResearchCoreYellow);
+					allCoreEfficiencyTech2.setDependencies(greenCoreEfficiencyTech);
+					allCoreEfficiencyTech2.register();
+				}
 				
-				allCoreEfficiencyTech2 = new CustomTech(Unlock.TechCategory.Science, "Research Core Power Boost II", "Boosts the power of all research cores to 150%.", ResearchCoreDefinition.CoreType.Gold, 500); //== 500 gold/1500 green/4500 blue/13500 purple, breakeven at spent 1000 gold
-				allCoreEfficiencyTech2.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 7), YELLOW_CORE_COLUMN);
-				allCoreEfficiencyTech2.setSprite(EMU.Names.Unlocks.ResearchCoreYellow);
-				allCoreEfficiencyTech2.setDependencies(greenCoreEfficiencyTech);
-				allCoreEfficiencyTech2.register();
-				
-				spectralYieldCoreTech = new CoreBoostTech(5, ResearchCoreDefinition.CoreType.Gold, 200);
+				spectralYieldCoreTech = new CoreBoostTech(config.getInt(STConfig.ConfigEntries.CUBECOREEFFECT), ResearchCoreDefinition.CoreType.Gold, config.getInt(STConfig.ConfigEntries.CUBECORECOST));
 				spectralYieldCoreTech.setText("Spectral Cubes", "spectral cube crafting yield");
 				spectralYieldCoreTech.setPosition(TTUtil.getTierAtStation(TTUtil.ProductionTerminal.SIERRA, 7), COREBOOST_COLUMN);
 				spectralYieldCoreTech.setSprite(EMU.Names.Unlocks.SpectralCubeColorless);
@@ -210,6 +217,8 @@ namespace ReikaKalseki.SierraTech {
 				new MachineScrapRecipe(EMU.Names.Resources.ThresherMKII).register();
 				new MachineScrapRecipe(EMU.Names.Resources.CrankGeneratorMKII).register();
 				new MachineScrapRecipe(EMU.Names.Resources.ResearchCore520nmGreen).register();
+				
+				new DrillCrushingRecipe().register();
 
 				DIMod.onDefinesLoadedFirstTime += onDefinesLoaded;
 				DIMod.onTechsLoadedFirstTime += onTechsLoaded;
@@ -225,18 +234,23 @@ namespace ReikaKalseki.SierraTech {
 		}
         
 		private static void onDefinesLoaded() {
-        	TTUtil.setDrillUsableUntil(EMU.Names.Resources.ExcavatorBitMKIV, TTUtil.ElevatorLevels.ARCHIVE); //or SIERRA
-        	TTUtil.setDrillUsableUntil(EMU.Names.Resources.ExcavatorBitMKV, TTUtil.ElevatorLevels.MECH);
-        	ResourceInfo drill6 = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.ExcavatorBitMKVI);
-        	drill6.digFuelPoints = drill6.digFuelPoints.multiplyBy(1.6); //from 1250 to 2000
-        	EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.ExcavatorBitMKVII).digFuelPoints *= 2; //from 2500 to 5000
+    		if (config.getBoolean(STConfig.ConfigEntries.ELEVATORDRILLADJUST)) {
+	        	TTUtil.setDrillUsableUntil(EMU.Names.Resources.ExcavatorBitMKIV, TTUtil.ElevatorLevels.ARCHIVE); //or SIERRA
+	        	TTUtil.setDrillUsableUntil(EMU.Names.Resources.ExcavatorBitMKV, TTUtil.ElevatorLevels.LABORATORY);
+	        	ResourceInfo drill6 = EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.ExcavatorBitMKVI);
+	        	drill6.digFuelPoints = drill6.digFuelPoints.multiplyBy(1.6); //from 1250 to 2000
+	        	EMU.Resources.GetResourceInfoByName(EMU.Names.Resources.ExcavatorBitMKVII).digFuelPoints *= 2; //from 2500 to 5000
+    		}
 		}
 		
-		private static void onTechsLoaded() {        	
+    	private static void onTechsLoaded() {
 			Unlock makeCrys = TTUtil.getUnlock(EMU.Names.Unlocks.SesamiteCrystalSynthesis);
 			Unlock crushCrys = TTUtil.getUnlock(EMU.Names.Unlocks.SesamitePowderExtraction);
-        	makeCrys.adjustCoreCost(0.333); //from 300 to 100
-        	crushCrys.adjustCoreCost(2/3.5); //from 350 to 200
+			
+    		if (config.getBoolean(STConfig.ConfigEntries.CRUSHERPOWERTECHCOST)) {
+	        	makeCrys.adjustCoreCost(0.333); //from 300 to 100
+	        	crushCrys.adjustCoreCost(2/3.5); //from 350 to 200
+    		}
         	
         	string[] desc1 = makeCrys.getDescription().Split('.');
         	string[] desc2 = crushCrys.getDescription().Split('.');
@@ -254,20 +268,39 @@ namespace ReikaKalseki.SierraTech {
         	TTUtil.getUnlock(EMU.Names.Unlocks.SpindleDisassembly).treePosition = (int)TTUtil.TechColumns.CENTERRIGHT;
         	TTUtil.getUnlock(EMU.Names.Unlocks.MechanismDisassemblyCopper).treePosition = (int)TTUtil.TechColumns.CENTERRIGHT;
         	
+        	if (config.getBoolean(STConfig.ConfigEntries.ELEVATORDRILLADJUST)) {
+        		replaceRangeInDescription(EMU.Names.Unlocks.ExcavatorBitMKVI, EMU.Names.Resources.ExcavatorBitMKVI);
+        		replaceRangeInDescription(EMU.Names.Unlocks.ExcavatorBitMKVII, EMU.Names.Resources.ExcavatorBitMKVII);
+        	}
+        	
 		}
+    	
+    	private static void replaceRangeInDescription(string name, string itemRef) {
+    		ResourceInfo item = EMU.Resources.GetResourceInfoByName(itemRef);
+    		int points = item.digFuelPoints;
+    		Unlock u = TTUtil.getUnlock(name);
+    		string desc = u.getDescription();
+    		int idx2 = desc.IndexOf("m Before", StringComparison.InvariantCultureIgnoreCase);
+    		int idx1 = desc.LastIndexOf(' ', idx2-1);
+    		desc = desc.Substring(0, idx1+1)+points+desc.Substring(idx2);
+    		u.setDescription(desc);
+    		item.description = desc;
+    	}
         
 		private static void onRecipesLoaded() {
+    		float f = config.getFloat(STConfig.ConfigEntries.CRUSHERPOWERSCALE);
 			SchematicsRecipeData crystalBuilding = GameDefines.instance.GetValidCrusherRecipes(new List<int>{
 				EMU.Resources.GetResourceIDByName(EMU.Names.Resources.ShiverthornExtract),
 				EMU.Resources.GetResourceIDByName(EMU.Names.Resources.SesamitePowder),
 			}, 9999, 9999, false)[0];
-			crystalBuilding.scalePower(2, 2); //from 150 max 18MJ to 300 max 72MJ
+    		crystalBuilding.scalePower(2, 2*f); //from 150 max 18MJ to 300 max 72MJ
 			SchematicsRecipeData crystalCrushing = GameDefines.instance.GetValidCrusherRecipes(new List<int>{
 				EMU.Resources.GetResourceIDByName(EMU.Names.Resources.SesamiteCrystal),
 			}, 9999, 9999, false)[0];
-			crystalCrushing.scalePower(2400/950F, 2); //from 950 max 64k to 2.4MJ max 323MJ
+			crystalCrushing.scalePower(2400/950F, 2*f); //from 950 max 64k to 2.4MJ max 323MJ
 			
-			TTUtil.getRecipesByOutput(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.SpectralCubeColorlessX100))[0].replaceIngredient(EMU.Names.Resources.SesamiteIngot, EMU.Names.Resources.AtlantumMixtureBrick);
+			if (config.getBoolean(STConfig.ConfigEntries.ATLANTCUBE))
+				TTUtil.getRecipesByOutput(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.SpectralCubeColorlessX100))[0].replaceIngredient(EMU.Names.Resources.SesamiteIngot, EMU.Names.Resources.AtlantumMixtureBrick);
 		}
 		
 		public static void onTechActivated(int id) {
@@ -279,13 +312,13 @@ namespace ReikaKalseki.SierraTech {
 		}
 		
 		private static void onTechStatesChanged() {
-			if (allCoreEfficiencyTech2.isUnlocked)
+			if (allCoreEfficiencyTech2 != null && allCoreEfficiencyTech2.isUnlocked)
 				TechTreeState.coreEffiencyMultipliers = new float[]{1.5F, 1.5F, 1.5F, 1.5F, 1, 1};
-			else if (greenCoreEfficiencyTech.isUnlocked)
+			else if (greenCoreEfficiencyTech != null && greenCoreEfficiencyTech.isUnlocked)
 				TechTreeState.coreEffiencyMultipliers = new float[]{1.25F, 1.25F, 1.25F, 1, 1, 1};
 			else
 				TechTreeState.coreEffiencyMultipliers = new float[]{1.25F, 1, 1.25F, 1, 1, 1};
-			TTUtil.log("Efficiency techs: "+allCoreEfficiencyTech2.isUnlocked+"/"+greenCoreEfficiencyTech.isUnlocked+" > "+TechTreeState.coreEffiencyMultipliers.toDebugString());
+			//TTUtil.log("Efficiency techs: "+allCoreEfficiencyTech2.isUnlocked+"/"+greenCoreEfficiencyTech.isUnlocked+" > "+TechTreeState.coreEffiencyMultipliers.toDebugString());
 			
 			CrusherPowerTrimTech tech = getCrusherPowerTechLevel();
 			PowerNetwork.powerConsumptionMultipliers[(int)MachineTypeEnum.Crusher] = tech == null ? 1 : tech.efficiency;
@@ -312,17 +345,15 @@ namespace ReikaKalseki.SierraTech {
 			return null;
 		}
 		
-		public static float sandPumpFactor = 1;
+		//public static float sandPumpFactor = 1;
 		
 		private static float getSandPumpRateFactor(float val) {
 			SandPumpTech.TechLevel lvl = getHighestPumpLevelUnlocked();
 			//TTUtil.log("Sand pump available tech level is "+lvl);
 			if (lvl != null)
 				val *= lvl.pumpMultiplier;
-        	if (sandPumpCoreTech.isUnlocked && TechTreeState.instance.freeCores > 0) {
-        		val *= 1+TTUtil.getCoreClusterCount()*0.1F;
-			}
-			return val*sandPumpFactor;
+			val *= 1+sandPumpCoreTech.currentEffect;
+			return val;//*sandPumpFactor;
 		}
 		
 		public static float getSandPumpRateDisplay(float val, SandPumpInspector insp, SandPumpInstance inst) {

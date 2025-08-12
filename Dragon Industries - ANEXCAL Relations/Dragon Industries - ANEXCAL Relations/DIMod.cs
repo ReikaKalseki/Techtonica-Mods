@@ -34,6 +34,8 @@ namespace ReikaKalseki.DIANEXCAL {
         
 		private static bool definesLoadedFired;
 		private static bool techsLoadedFired;
+    
+    	public static readonly Config<DIConfig.ConfigEntries> config = new Config<DIConfig.ConfigEntries>(TTUtil.diDLL);
 
 		public DIMod()
 			: base() {
@@ -44,6 +46,8 @@ namespace ReikaKalseki.DIANEXCAL {
 		public void Awake() {
 			TTUtil.log("Begin Initializing Dragon Industries", TTUtil.diDLL);
 			try {
+        		config.load();
+        
 				Harmony harmony = new Harmony("Dragon Industries");
 				Harmony.DEBUG = true;
 				FileLog.logPath = Path.Combine(Path.GetDirectoryName(TTUtil.diDLL.Location), "harmony-log_" + Path.GetFileName(Assembly.GetExecutingAssembly().Location) + ".txt");
@@ -120,15 +124,17 @@ namespace ReikaKalseki.DIANEXCAL {
 			TTUtil.log("Recipe data loaded, running hooks", TTUtil.diDLL);
         	
 			TTUtil.buildRecipeCache();
-        	/*
-			doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.IronOre));
-			doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.CopperOre));
-			doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.GoldOre));
         	
-			doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.IronOre)));
-			doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.CopperOre)));
-			doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.AtlantumOre)));
-        	*/
+			if (config.getBoolean(DIConfig.ConfigEntries.EFFICIENTMETAL)) {
+				doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.IronOre));
+				doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.CopperOre));
+				doubleRecipe(TTUtil.getSmelterRecipe(EMU.Names.Resources.GoldOre));
+	        	
+				doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.IronOre)));
+				doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.CopperOre)));
+				doubleRecipe(GameDefines.instance.GetThreshingRecipeForResource(EMU.Resources.GetResourceIDByName(EMU.Names.Resources.AtlantumOre)));
+			}
+        	
 			if (onRecipesLoaded != null) {
 				try {
 					onRecipesLoaded.Invoke();

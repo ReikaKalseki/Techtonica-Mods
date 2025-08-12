@@ -39,10 +39,9 @@ $RECYCLE.BIN/
 *.Settings
 *.log
 *.sdsettings
+*.zip
 
 obj/
 bin/
-XML/WorldgenSets-temp/*
-XML/WorldgenSets/*
 
 npp session

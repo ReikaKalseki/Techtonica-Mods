@@ -36,6 +36,10 @@ namespace ReikaKalseki.SierraTech {
 		private static float scrapPerRelayMostEfficient;
 		private static float weightedScrapPerRelay;
 		
+		public static float getScrapPerRelay() {
+			return weightedScrapPerRelay;
+		}
+		
 		public readonly string sourceItem;
 		
 		static MachineScrapRecipe() {
@@ -134,7 +138,7 @@ namespace ReikaKalseki.SierraTech {
 		private static int computeYield(string from, out int surplus, float efficacy = 1) {
 		 	SchematicsRecipeData rec = TTUtil.getRecipesByOutput(from)[0];
 		 	float relaysPer = rec.getCost(relayID)/((float)rec.outputQuantities[0]*4); //include x4 since assembler II
-			int ret = MathUtil.roundUpToX((weightedScrapPerRelay*relaysPer*efficacy).CeilToInt(), 50);
+		 	int ret = MathUtil.roundUpToX((weightedScrapPerRelay*relaysPer*efficacy*SierraTechMod.config.getFloat(STConfig.ConfigEntries.SCRAPCYCLERATIO)).CeilToInt(), 50);
 			surplus = ret-(scrapPerRelayMostEfficient*relaysPer).FloorToInt();
 			return ret;
 		}

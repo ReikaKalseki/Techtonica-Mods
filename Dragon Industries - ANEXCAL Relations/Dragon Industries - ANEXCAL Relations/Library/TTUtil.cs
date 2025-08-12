@@ -322,6 +322,16 @@ namespace ReikaKalseki.DIANEXCAL {
 	    	return allRecipes.ToList().FindAll(check);
 	    }
 	    
+	    public static SchematicsRecipeData getSmelterRecipe(string item) {
+	    	ResourceInfo res = EMU.Resources.GetResourceInfoByName(item);
+	    	if (res == null)
+	    		throw new Exception("No such item '"+item+"'!");
+	    	List<SchematicsRecipeData> li = GameDefines.instance.GetValidSmelterRecipes(new List<int>{res.uniqueId}, 100, 100, false);
+	    	if (li.Count == 0)
+	    		log("No smelter recipe found using '"+item+"'!", diDLL);
+	    	return li.Count == 0 ? null : li[0];
+	    }
+	    
 	    public static bool isSeed(ResourceInfo ri) {
 	    	return ri.uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.KindlevineSeed) || ri.uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.ShiverthornSeed) || ri.uniqueId == EMU.Resources.GetResourceIDByName(EMU.Names.Resources.SesamiteSeed);
 	    }
